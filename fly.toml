@@ -1,0 +1,39 @@
+# Koco — Türkçe Kojo. Tek konteynerde router + compilerServer + editör, önlerinde nginx.
+app = 'ikojo'
+
+# Hedef kitle Türkiye'de: Frankfurt en yakın Fly bölgesi.
+# ABD'den kullanılacaksa 'iad' daha iyi olur.
+primary_region = 'fra'
+
+[build]
+  # Dockerfile aynı dizinde; stage/ önceden build.sh ile hazırlanmış olmalı.
+
+[http_service]
+  internal_port = 7860
+  force_https = true
+
+  # UYKU KAPALI. Fly'ı zaten bunun için seçtik: makine uyursa her uyanışta
+  # ~15 sn açılış + 30-60 sn derleyici ısınması geri gelir (compilerServer
+  # coursier ile jar'ları açana kadar "No suitable compiler available" döner).
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  [[http_service.checks]]
+    # nginx en son başlıyor. Yerelde ~15 sn, ama Fly'ın paylaşımlı çekirdeğinde
+    # üç JVM yarıştığı için toplam açılış 3-4 dakikayı bulabiliyor.
+    grace_period = '300s'
+    # Uzun bir derleme sırasında makine yüklü olur; 5 sn'lik timeout sağlık
+    # kontrolünü düşürüp Fly'ın makineyi öldürmesine yol açıyordu.
+    interval = '30s'
+    timeout = '30s'
+    method = 'GET'
+    path = '/'
+
+[[vm]]
+  # shared-cpu-1x + 2GB yetmedi: (a) yığın sınırlarının toplamı makineyi aşıyordu
+  # (1200+512+384 = 2096m > 2048m), (b) tek derleyici örneği eşzamanlı iki
+  # kullanıcıyı kaldıramıyordu, (c) soğuk derleme 118 sn sürüyordu.
+  size = 'shared-cpu-2x'
+  memory = '4gb'

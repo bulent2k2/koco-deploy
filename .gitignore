@@ -1,0 +1,6 @@
+# build.sh'ın ürettiği derleme çıktısı (214 MB). Kaynak değil, türev.
+# Yeniden üretmek için: ./build.sh
+stage/
+
+.DS_Store
+*.log

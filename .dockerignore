@@ -1,0 +1,8 @@
+# Derleme bağlamına girmesine gerek yok — .git LFS nesneleriyle birlikte
+# yüzlerce MB olabilir ve HF Space derlemesini gereksiz yavaşlatır.
+.git
+.gitattributes
+.gitignore
+*.log
+.DS_Store
+README.md
