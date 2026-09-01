@@ -89,6 +89,17 @@ wait_for_port() {
   echo "[koco] $name hazır ($port, ${n}s)"
 }
 
+# --- Veritabanı şeması ---
+# kojojs-editor'ün tables.sql'i bir PostgreSQL KURULUM betiği (CREATE ROLE /
+# CREATE DATABASE / GRANT) ve elle çalıştırılmak için yazılmış; Play evolutions
+# da kurulu değil. Sonuç: bellek-içi H2 boş açılıyor ve GitHub girişi
+# "Table \"user\" not found" ile patlıyor.
+# H2'nin INIT=RUNSCRIPT'i ile bağlantı anında şemayı kuruyoruz.
+#
+# NOT: hâlâ BELLEK-İÇİ. Makine yeniden başlarsa kaydedilen yazılımcıklar ve
+# kullanıcılar gider. Kalıcılık için SCALAFIDDLE_SQL_URL ile gerçek Postgres.
+H2_URL="${H2_URL:-jdbc:h2:mem:tsql1;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;INIT=RUNSCRIPT FROM '/app/schema-h2.sql'}"
+
 # --- Silhouette (GitHub girişi) ---
 # silhouette.conf'ta imzalama/şifreleme anahtarları "[changeme]" olarak SABİT ve
 # env override'ları YOK. JcaSigner/JcaCrypter bunları AES için kullanıyor; 10
@@ -122,6 +133,7 @@ fi
   -Dsilhouette.oauth1TokenSecretProvider.crypter.key="$SIL_KEY" \
   -Dsilhouette.authenticator.secureCookie=$SECURE_COOKIE \
   -Dsilhouette.csrfStateItemHandler.secureCookie=$SECURE_COOKIE \
+  -Dh2.db.url="$H2_URL" \
   -Dhttp.port=9000 &
 
 wait_for_port 9000 "editör" 300   # Fly shared-cpu-1x: yerelde 6 sn, orada 100+ sn

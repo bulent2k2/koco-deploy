@@ -69,6 +69,12 @@ Bu kurulumu yeniden üretecek olan için, pahalıya mal olmuş dersler:
   2021'de kaldırdı. `HeaderAuthGitHubProvider` (kojojs-editor'de) bunu düzeltiyor.
 - **Aynı origin CORS'u kurtarmıyor**: tarayıcı same-origin POST'ta bile `Origin`
   gönderiyor. curl göndermediği için curl testi bu hatayı yakalamaz.
+- **Veritabanı şeması kendiliğinden kurulmuyor.** `tables.sql` bir PostgreSQL
+  *kurulum* betiği (`CREATE ROLE`/`CREATE DATABASE`/`GRANT`) ve Play evolutions
+  kurulu değil, yani bellek-içi H2 boş açılıyor; GitHub girişi
+  `Table "user" not found` ile patlıyor. `schema-h2.sql` + H2'nin
+  `INIT=RUNSCRIPT`'i bunu çözüyor. **Veri hâlâ kalıcı değil** -- kalıcılık için
+  `SCALAFIDDLE_SQL_URL` ile gerçek Postgres gerekiyor.
 - **Port bekleme zaman aşımı ölümcül olmamalı.** Fly'ın paylaşımlı çekirdeğinde
   editör 100+ sn'de açılabiliyor; `exit` edersen makine sonsuz döngüye girer.
 
