@@ -69,6 +69,11 @@ EDITOR_OPTS="-J-Xmx640m"
 # kullanıcı için N süreç gerekiyor.
 COMPILER_INSTANCES="${COMPILER_INSTANCES:-2}"
 
+# Coursier önbelleğini KALICI diske koy. Aksi halde her yeniden başlatmada
+# jar'lar yeniden indirilip açılıyor ve ilk derleme 30-60 sn gecikiyor.
+# Volume'de tutunca bu bedel ömürde bir kez ödeniyor.
+export COURSIER_CACHE="${COURSIER_CACHE:-/data/coursier}"
+
 mkdir -p /tmp/nginx-client /tmp/nginx-proxy /tmp/nginx-fastcgi /tmp/nginx-uwsgi /tmp/nginx-scgi
 
 # $1 port, $2 ad, $3 azami saniye

@@ -6,7 +6,7 @@
 # yetmiyor: bağlama (mount) onu gölgeliyor, yani chown bağlamadan SONRA olmalı.
 set -eu
 
-mkdir -p /data
+mkdir -p /data /data/coursier
 chown -R koco:koco /data
 
 # nginx access_log /dev/stdout'a yazıyor; o boru root'a ait ve uid düştükten

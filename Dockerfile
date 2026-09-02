@@ -30,6 +30,11 @@ RUN chmod +x /app/start.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin
 # logback ./logs/application.log'a yazmak istiyor; CWD yazılabilir olmalı
 WORKDIR /app
 
+# setpriv HOME'u DEĞİŞTİRMİYOR. USER koco kullanırken Docker bunu kendisi
+# ayarlıyordu; artık root'tan düştüğümüz için elle vermek şart, yoksa coursier
+# /root/.cache'e yazmaya çalışıp "Permission denied" alıyor ve derleyici ölüyor.
+ENV HOME=/home/koco
+
 # USER koco YOK: entrypoint root olarak başlayıp volume'ü chown etmeli, sonra
 # setpriv ile uid 1000'e düşüyor. JVM'lerin hiçbiri root çalışmıyor.
 EXPOSE 7860
