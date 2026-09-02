@@ -31,6 +31,12 @@ primary_region = 'fra'
     method = 'GET'
     path = '/'
 
+# Kalıcı disk: H2 veritabanı dosyası burada. Volume tek makineye bağlanır --
+# zaten min_machines_running = 1 ve count = 1 ile çalışıyoruz.
+[mounts]
+  source = 'koco_data'
+  destination = '/data'
+
 [[vm]]
   # shared-cpu-1x + 2GB yetmedi: (a) yığın sınırlarının toplamı makineyi aşıyordu
   # (1200+512+384 = 2096m > 2048m), (b) tek derleyici örneği eşzamanlı iki

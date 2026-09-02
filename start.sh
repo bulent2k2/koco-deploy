@@ -98,7 +98,10 @@ wait_for_port() {
 #
 # NOT: hâlâ BELLEK-İÇİ. Makine yeniden başlarsa kaydedilen yazılımcıklar ve
 # kullanıcılar gider. Kalıcılık için SCALAFIDDLE_SQL_URL ile gerçek Postgres.
-H2_URL="${H2_URL:-jdbc:h2:mem:tsql1;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;INIT=RUNSCRIPT FROM '/app/schema-h2.sql'}"
+# DOSYA kipi: /data bir Fly volume, yani yeniden başlatmalarda kalıcı.
+# INIT=RUNSCRIPT her bağlantıda çalışıyor; schema-h2.sql CREATE TABLE IF NOT
+# EXISTS kullandığı için bu idempotent.
+H2_URL="${H2_URL:-jdbc:h2:/data/koco;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;INIT=RUNSCRIPT FROM '/app/schema-h2.sql'}"
 
 # --- Silhouette (GitHub girişi) ---
 # silhouette.conf'ta imzalama/şifreleme anahtarları "[changeme]" olarak SABİT ve

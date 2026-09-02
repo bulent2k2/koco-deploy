@@ -16,6 +16,7 @@ RUN useradd -m -u 1000 koco
 COPY nginx.conf        /etc/nginx/nginx.conf
 COPY proxy_common.conf /etc/nginx/proxy_common.conf
 COPY start.sh          /app/start.sh
+COPY entrypoint.sh     /app/entrypoint.sh
 COPY schema-h2.sql     /app/schema-h2.sql
 
 COPY stage/router   /app/router
@@ -28,6 +29,8 @@ RUN chmod +x /app/start.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin
 
 # logback ./logs/application.log'a yazmak istiyor; CWD yazılabilir olmalı
 WORKDIR /app
-USER koco
+
+# USER koco YOK: entrypoint root olarak başlayıp volume'ü chown etmeli, sonra
+# setpriv ile uid 1000'e düşüyor. JVM'lerin hiçbiri root çalışmıyor.
 EXPOSE 7860
-CMD ["/app/start.sh"]
+CMD ["/app/entrypoint.sh"]
