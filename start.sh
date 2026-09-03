@@ -138,8 +138,10 @@ else
 fi
 # Editör Java 8 ile koşar (Play 2.6 + eski silhouette Java 21'de sorunlu);
 # router ve compilerServer taban imajın Java 21'ini kullanır (2.13.18 orada
-# doğrulandı). native-packager betiği JAVACMD'yi tanır.
-JAVACMD=/usr/lib/jvm/java-8-openjdk-amd64/bin/java \
+# doğrulandı). native-packager betiği JAVACMD'yi tanır. /opt/java8 Dockerfile'ın
+# kurduğu mimariden bağımsız symlink (amd64/arm64 paket dizinleri farklı);
+# `env` tek komut olduğu için araya satır girse de önek kaybolmaz.
+env JAVACMD=/opt/java8/bin/java \
 /app/editor/bin/server $EDITOR_OPTS \
   -Dplay.http.secret.key="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}" \
   -Dsilhouette.authenticator.signer.key="$SIL_KEY" \

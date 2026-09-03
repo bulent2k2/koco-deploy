@@ -14,6 +14,12 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends nginx ca-certificates openjdk-8-jre-headless \
  && rm -rf /var/lib/apt/lists/* /etc/nginx/sites-enabled/default
 
+# Java 8'in paket dizini mimariye göre değişir (java-8-openjdk-amd64 / -arm64).
+# start.sh'ın kullandığı sabit /opt/java8 symlink'ini burada kur: yol yanlışsa
+# `java -version` imaj derlemesinde patlar, çalışma zamanına sarkmaz.
+RUN ln -s /usr/lib/jvm/java-8-openjdk-* /opt/java8 \
+ && /opt/java8/bin/java -version
+
 # HF Spaces konteyneri root olmayan kullanıcıyla çalışır
 RUN useradd -m -u 1000 koco
 
