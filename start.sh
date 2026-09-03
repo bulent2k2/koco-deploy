@@ -9,6 +9,11 @@
 #    ilk denemeyi kaçırırsa ~50 dakika tekrar denemez.
 set -eu
 
+# Türkçe adlı sınıflar (fiddle'lardaki nesne/sınıf adları dahil) UTF-8 yereli
+# ister: POSIX yerelde JVM dosya adlarını yazamayıp InvalidPathException veriyor
+# (Faz 0 PoC bulgusu, bkz. kojojs-dev/poc/faz0-yamali-derleyici/SONUC.md).
+export LANG=C.UTF-8 LC_ALL=C.UTF-8
+
 # Genel adres barındırıcıya göre değişiyor. Sırayla:
 #   PUBLIC_URL    -> elle geçersiz kılma (özel alan adı vb.)
 #   SPACE_HOST    -> Hugging Face Spaces
@@ -43,9 +48,9 @@ export SCALAFIDDLE_EDIT_URL="http://localhost:9000/"
 # DİKKAT: SCALAFIDDLE_LIBRARIES_URL'i SAKIN burada ayarlama.
 # İki servis aynı değişkeni FARKLI formatlarda okuyor:
 #   editör -> librariesURL, bir kaynak dosya adı bekliyor ("libraries.json")
-#   router -> extLibs,      bir JSON haritası bekliyor ({"2.12": "..."})
+#   router -> extLibs,      bir JSON haritası bekliyor ({"2.13": "..."})
 # Global olarak ayarlanırsa editörün Librarian'ı None.get ile çöker,
-# /libraries/2.12 boş [] döner ve compilerServer kütüphaneleri yükleyemez.
+# /libraries/2.13 boş [] döner ve compilerServer kütüphaneleri yükleyemez.
 # Her ikisinin varsayılanı tek konteyner için zaten doğru.
 
 # Yığın sınırları. DİKKAT: toplamları makinenin belleğini AŞMAMALI -- ilk
@@ -131,6 +136,12 @@ if [ -n "${GITHUB_CLIENT_ID:-}" ]; then
 else
   echo "[koco] editör başlıyor... (GitHub girişi: YAPILANDIRILMADI — GITHUB_CLIENT_ID yok)"
 fi
+# Editör Java 8 ile koşar (Play 2.6 + eski silhouette Java 21'de sorunlu);
+# router ve compilerServer taban imajın Java 21'ini kullanır (2.13.18 orada
+# doğrulandı). native-packager betiği JAVACMD'yi tanır. /opt/java8 Dockerfile'ın
+# kurduğu mimariden bağımsız symlink (amd64/arm64 paket dizinleri farklı);
+# `env` tek komut olduğu için araya satır girse de önek kaybolmaz.
+env JAVACMD=/opt/java8/bin/java \
 /app/editor/bin/server $EDITOR_OPTS \
   -Dplay.http.secret.key="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}" \
   -Dsilhouette.authenticator.signer.key="$SIL_KEY" \

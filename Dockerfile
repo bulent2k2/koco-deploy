@@ -4,11 +4,21 @@
 # http://repo.typesafe.com (düz HTTP, ölü) çözümleyicisini kullanıyor; soğuk
 # önbellekle Docker içinde bağımlılık çözümlemesi çöker. Bu yüzden paketleme
 # yerelde `./build.sh` ile yapılır, imaj yalnızca çıktıyı kopyalar.
-FROM eclipse-temurin:8-jre-jammy
+# Faz 3/4 (bkz. kojojs-dev/oneri-scala-2.13.md): router + compilerServer artık
+# Scala 2.13.18 / Scala.js 1.20 ve Java 21 üzerinde doğrulandı; editör (Play
+# 2.6, sbt 0.13 ile derleniyor) hâlâ Java 8 istiyor. İki JRE bir arada:
+# taban imaj 21, editör için apt'ten openjdk-8 (start.sh JAVACMD ile seçiyor).
+FROM eclipse-temurin:21-jre-jammy
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends nginx ca-certificates \
+ && apt-get install -y --no-install-recommends nginx ca-certificates openjdk-8-jre-headless \
  && rm -rf /var/lib/apt/lists/* /etc/nginx/sites-enabled/default
+
+# Java 8'in paket dizini mimariye göre değişir (java-8-openjdk-amd64 / -arm64).
+# start.sh'ın kullandığı sabit /opt/java8 symlink'ini burada kur: yol yanlışsa
+# `java -version` imaj derlemesinde patlar, çalışma zamanına sarkmaz.
+RUN ln -s /usr/lib/jvm/java-8-openjdk-* /opt/java8 \
+ && /opt/java8/bin/java -version
 
 # HF Spaces konteyneri root olmayan kullanıcıyla çalışır
 RUN useradd -m -u 1000 koco
