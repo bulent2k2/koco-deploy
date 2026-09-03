@@ -20,7 +20,7 @@ Tek konteynerde üç JVM servisi ve önlerinde nginx:
 |---|---|---|
 | editör (Play) | 9000 | arayüz, yazılımcık kaydetme, GitHub girişi |
 | router (akka-http) | 8880 | derleme isteklerini yönlendirir, gömülü görünüm |
-| compilerServer × N | — | Scala derleyicisi + Scala.js linker; router'a WebSocket ile bağlanır |
+| compilerServer × N | — | Scala derleyicisi + Scala.js linker; router'a WebSocket ile bağlanır. `build.sh` varsayılan olarak (KOCO_TOOLCHAIN=tr) scala-compiler/scala-reflect'i kojo/scala-tr'nin **Türkçe anahtar kelimeli** kopyalarıyla değiştirir |
 | nginx | **7860** | tek genel port |
 
 nginx yol ayrımı: `/compile`, `/complete`, `/embed`, `/codeframe`,
