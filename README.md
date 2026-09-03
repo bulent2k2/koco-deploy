@@ -31,6 +31,17 @@ altında birleştirdiği için yapılandırma çok basitleşiyor.
 
 ## Kurulum / dağıtım
 
+İki JDK gerekiyor (imajdaki çift JRE'nin derleme zamanı karşılığı):
+`kojojs-core` Java 9+ ister (compiler-server `InputStream.readAllBytes()`
+kullanıyor), `kojojs-editor` ise sbt 0.13 + Play 2.6 ile Java 8. `build.sh`
+adım başına seçiyor:
+
+```sh
+export KOCO_JDK_CORE=/path/to/jdk11      # ya da 17/21
+export KOCO_JDK_EDITOR=/path/to/jdk8
+export KOCO_SCALA_TR=/path/to/kojo/scala-tr/build/pack/lib   # yan yana değilse
+```
+
 ```sh
 ./build.sh                 # üç servisi paketler -> stage/ (git'e girmez)
 docker build -t koco .     # yerel test için
