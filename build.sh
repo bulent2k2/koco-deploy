@@ -18,16 +18,49 @@ SBT=${SBT:-$HOME/bin/sbt}
 KOCO_TOOLCHAIN=${KOCO_TOOLCHAIN:-tr}
 SCALA_TR=${KOCO_SCALA_TR:-$IKOCO/kojo/scala-tr/build/pack/lib}
 
+# İKİ FARKLI JDK gerekiyor -- imajdaki çift JRE'nin derleme zamanı karşılığı:
+#   kojojs-core  : Java 9+ ŞART. compiler-server FlatFileSystem.scala
+#                  InputStream.readAllBytes() kullanıyor, Java 8'de yok
+#                  ("value readAllBytes is not a member of java.io.InputStream").
+#   kojojs-editor: sbt 0.13 + Play 2.6, Java 8 istiyor.
+# Makinede `java` hangisiyse ona bırakmak birini kırıyor; her adım kendi
+# JAVA_HOME'unu alsın. Boş bırakılırsa o adım ortamdaki JDK'yi kullanır.
+KOCO_JDK_CORE=${KOCO_JDK_CORE:-}
+KOCO_JDK_EDITOR=${KOCO_JDK_EDITOR:-}
+
+# JAVA_HOME'u yalnız bir komut için kurar; PATH de gerekiyor çünkü sbt
+# başlatıcısı `java`yı PATH'ten buluyor, JAVA_HOME'a bakmıyor.
+ile_jdk() {
+  jdk=$1; shift
+  if [ -n "$jdk" ]; then
+    [ -x "$jdk/bin/java" ] || { echo "hata: $jdk/bin/java yok" >&2; exit 1; }
+    echo "    JDK: $("$jdk/bin/java" -version 2>&1 | head -1)"
+    JAVA_HOME=$jdk PATH=$jdk/bin:$PATH "$@"
+  else
+    "$@"
+  fi
+}
+
 case "$KOCO_TOOLCHAIN" in
   tr|en) ;;
   *) echo "hata: KOCO_TOOLCHAIN '$KOCO_TOOLCHAIN' tanınmıyor (tr ya da en olmalı)" >&2; exit 1;;
 esac
 
+# sbt'nin `stage` görevi HEDEF DİZİNİ TEMİZLEMİYOR: classpath'ten düşen jar'lar
+# target/universal/stage/lib altında yaşamaya devam ediyor. 2.13 geçişinden
+# sonra bu, 38 ölü 2.12 jar'ı (scala-compiler-2.12.10 dahil) demek -- hem imajı
+# şişiriyor hem de aşağıdaki takas globunu ikiye çıkarıp derlemeyi durduruyor.
+# rsync --delete bir alt katmanda aynı derdi çözüyor; kaynak burada temizlenmeli.
+for d in "$IKOCO/kojojs-core/router" "$IKOCO/kojojs-core/compiler-server" \
+         "$IKOCO/kojojs-editor/server"; do
+  rm -rf "$d/target/universal/stage"
+done
+
 echo "*** kojojs-core: router + compilerServer paketleniyor"
-(cd "$IKOCO/kojojs-core" && "$SBT" -batch "router/stage" "compilerServer/stage")
+(cd "$IKOCO/kojojs-core" && ile_jdk "$KOCO_JDK_CORE" "$SBT" -batch "router/stage" "compilerServer/stage")
 
 echo "*** kojojs-editor: Play sunucusu paketleniyor"
-(cd "$IKOCO/kojojs-editor" && "$SBT" -batch "server/stage")
+(cd "$IKOCO/kojojs-editor" && ile_jdk "$KOCO_JDK_EDITOR" "$SBT" -batch "server/stage")
 
 echo "*** deploy/stage/ toplanıyor"
 rm -rf "$HERE/stage"

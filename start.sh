@@ -138,10 +138,17 @@ else
 fi
 # Editör Java 8 ile koşar (Play 2.6 + eski silhouette Java 21'de sorunlu);
 # router ve compilerServer taban imajın Java 21'ini kullanır (2.13.18 orada
-# doğrulandı). native-packager betiği JAVACMD'yi tanır. /opt/java8 Dockerfile'ın
-# kurduğu mimariden bağımsız symlink (amd64/arm64 paket dizinleri farklı);
-# `env` tek komut olduğu için araya satır girse de önek kaybolmaz.
-env JAVACMD=/opt/java8/bin/java \
+# doğrulandı). /opt/java8 Dockerfile'ın kurduğu mimariden bağımsız symlink
+# (amd64/arm64 paket dizinleri farklı); `env` tek komut olduğu için araya
+# satır girse de önek kaybolmaz.
+#
+# JAVACMD DEĞİL, JAVA_HOME: sbt-native-packager'ın bash betiği JAVACMD diye bir
+# değişken tanımıyor (bkz. bin/server:105 get_java_cmd -- yalnız JAVA_HOME'a ve
+# -java-home bayrağına bakıyor). JAVACMD sessizce yok sayılıyordu ve editör
+# taban imajın Java 21'iyle açılıp şu hatayla ölüyordu:
+#   InaccessibleObjectException: ... module java.base does not "opens java.lang"
+# nginx ayakta kaldığı için sonuç 502'ydi, açık bir çökme değil.
+env JAVA_HOME=/opt/java8 \
 /app/editor/bin/server $EDITOR_OPTS \
   -Dplay.http.secret.key="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}" \
   -Dsilhouette.authenticator.signer.key="$SIL_KEY" \
