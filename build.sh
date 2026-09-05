@@ -9,14 +9,22 @@
 # KOCO_TOOLCHAIN=tr (varsayılan): compilerServer'ın scala-compiler +
 # scala-reflect jar'ları kojo/scala-tr'nin YAMALI (Türkçe anahtar kelimeli)
 # kopyalarıyla değiştirilir -- ikojo-tr'nin özü. KOCO_TOOLCHAIN=en stok bırakır.
-# KOCO_SCALA_TR: yamalı jar'ların dizinini geçersiz kılar (varsayılan:
-# yan yana klonlanmış kojo/scala-tr/build/pack/lib).
+# KOCO_SCALA_TR: yamalı jar'ların dizinini geçersiz kılar. Boşsa sırayla
+# yan yana klonlanmış kojo/scala-tr/build/pack/lib ve
+# ~/src/kojo/git/master/scala-tr/build/pack/lib denenir (ilk bulunan).
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 IKOCO=$HERE/..
 SBT=${SBT:-$HOME/bin/sbt}
 KOCO_TOOLCHAIN=${KOCO_TOOLCHAIN:-tr}
-SCALA_TR=${KOCO_SCALA_TR:-$IKOCO/kojo/scala-tr/build/pack/lib}
+SCALA_TR=${KOCO_SCALA_TR:-}
+if [ -z "$SCALA_TR" ]; then
+  for d in "$IKOCO/kojo/scala-tr/build/pack/lib" "$HOME/src/kojo/git/master/scala-tr/build/pack/lib"; do
+    [ -f "$d/scala-compiler.jar" ] && { SCALA_TR=$d; break; }
+  done
+  # bulunamadıysa aşağıdaki takas adımı yolu adıyla söyleyip dursun
+  : "${SCALA_TR:=$IKOCO/kojo/scala-tr/build/pack/lib}"
+fi
 
 # İKİ FARKLI JDK gerekiyor -- imajdaki çift JRE'nin derleme zamanı karşılığı:
 #   kojojs-core  : Java 9+ ŞART. compiler-server FlatFileSystem.scala
@@ -24,9 +32,48 @@ SCALA_TR=${KOCO_SCALA_TR:-$IKOCO/kojo/scala-tr/build/pack/lib}
 #                  ("value readAllBytes is not a member of java.io.InputStream").
 #   kojojs-editor: sbt 0.13 + Play 2.6, Java 8 istiyor.
 # Makinede `java` hangisiyse ona bırakmak birini kırıyor; her adım kendi
-# JAVA_HOME'unu alsın. Boş bırakılırsa o adım ortamdaki JDK'yi kullanır.
-KOCO_JDK_CORE=${KOCO_JDK_CORE:-}
-KOCO_JDK_EDITOR=${KOCO_JDK_EDITOR:-}
+# JAVA_HOME'unu alsın. Boş bırakılırsa macOS'ta /usr/libexec/java_home
+# listesinden javac'lı ilk uygun JDK seçilir (core: 11, yoksa 9+; editör: 8;
+# javac şartı /Library/Internet Plug-Ins altındaki salt JRE'yi dışlar); başka
+# yerde ortamdaki JDK kalır. İki durumda da sürüm sbt BAŞLAMADAN denetlenir:
+# yanlış JDK'yle dakikalarca derleyip sonda patlamasın. Bu makinede denenmiş
+# çift: Temurin 11.0.24 (core) + Oracle 1.8.0_271 (editör).
+jdk_bul() {  # $1: ana sürüm ("8", "11") ya da en az ("9+"); javac'lı ilk eşleşme
+  [ -x /usr/libexec/java_home ] || return 0
+  /usr/libexec/java_home -V 2>&1 | sed -n 's/^ *\([0-9][0-9.]*\)[^/]*\(\/.*\)$/\1 \2/p' |
+  while read -r ver home; do
+    maj=${ver%%.*}
+    if [ "$maj" = 1 ]; then maj=${ver#1.}; maj=${maj%%.*}; fi
+    case $1 in
+      *+) [ "$maj" -ge "${1%+}" ] || continue;;
+      *)  [ "$maj" = "$1" ] || continue;;
+    esac
+    [ -x "$home/bin/javac" ] && { echo "$home"; break; }
+  done
+  return 0
+}
+KOCO_JDK_CORE=${KOCO_JDK_CORE:-$(jdk_bul 11)}
+[ -n "$KOCO_JDK_CORE" ] || KOCO_JDK_CORE=$(jdk_bul 9+)
+KOCO_JDK_EDITOR=${KOCO_JDK_EDITOR:-$(jdk_bul 8)}
+
+# `java -version` ilk satırından ana sürüm: "1.8.0_271" -> 8, "11.0.24" -> 11
+jdk_surum() {
+  if [ -n "$1" ]; then j=$1/bin/java; else j=java; fi
+  "$j" -version 2>&1 | sed -n '1s/.*"\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p' |
+    awk '{ print ($1 == 1) ? $2 : $1 }'
+}
+jdk_denetle() {  # $1: JDK dizini (boş = ortamdaki), $2: en az, $3: en çok, $4: adım
+  s=$(jdk_surum "$1")
+  if [ -z "$s" ] || [ "$s" -lt "$2" ] || [ "$s" -gt "$3" ]; then
+    echo "hata: $4 için Java $2..$3 gerekiyor; ${1:-ortamdaki} JDK ${s:-?} veriyor" >&2
+    echo "      KOCO_JDK_CORE / KOCO_JDK_EDITOR ile doğru JDK dizinini geçin" >&2
+    exit 1
+  fi
+}
+jdk_denetle "$KOCO_JDK_CORE"   9 99 kojojs-core
+jdk_denetle "$KOCO_JDK_EDITOR" 8  8 kojojs-editor
+echo "*** JDK core: ${KOCO_JDK_CORE:-ortamdaki} | editör: ${KOCO_JDK_EDITOR:-ortamdaki}"
+echo "*** scala-tr: $SCALA_TR"
 
 # JAVA_HOME'u yalnız bir komut için kurar; PATH de gerekiyor çünkü sbt
 # başlatıcısı `java`yı PATH'ten buluyor, JAVA_HOME'a bakmıyor.
@@ -132,7 +179,7 @@ if [ "$KOCO_TOOLCHAIN" = "tr" ]; then
     fi
     dest=$1
     src="$SCALA_TR/$base.jar"
-    [ -f "$src" ] || { echo "hata: $src yok (kojo klonu ve scala-tr pack gerekli)" >&2; exit 1; }
+    [ -f "$src" ] || { echo "hata: $src yok (kojo klonu ve scala-tr pack gerekli; dizin farklıysa KOCO_SCALA_TR=... geçin)" >&2; exit 1; }
     if [ "$base" = "scala-compiler" ]; then
       # Sürüm eşleşmesini doğrula: scala-tr farklı bir 2.13.x'ten pack'lenmişse
       # takas sessizce başarılı olur ama çalışma zamanında NoSuchMethodError
