@@ -215,11 +215,19 @@ echo "    $(find "$HERE/stage/ornekler" -name '*.kojo*' | wc -l | tr -d ' ') bet
 
 # Ses/görüntü dosyaları: masaüstü betikleri "/media/..." yollarını kullanır;
 # nginx.conf /media/ yolunu /app/medya dizinine bağlar.
-echo "*** kojojs-dev/medya toplanıyor"
-mkdir -p "$HERE/stage/medya"
-rsync -a --delete --exclude 'guncelle.sh' --exclude 'README.md' --exclude 'KAYNAK.txt' \
-  "$IKOCO/kojojs-dev/medya/" "$HERE/stage/medya/"
-echo "    $(find "$HERE/stage/medya" -type f | wc -l | tr -d ' ') dosya"
+# Yumuşak bağımlılık: medya/ kojojs-dev Devre 4 ile geliyor; eski bir klonda
+# yoksa build durmasın (set -e altında rsync 23 ile çökerdi). Boş stage/medya
+# COPY ve /media/ alias'ını ayakta tutar; dosyalar gelince doğal dolar.
+if [ -d "$IKOCO/kojojs-dev/medya" ]; then
+  echo "*** kojojs-dev/medya toplanıyor"
+  mkdir -p "$HERE/stage/medya"
+  rsync -a --delete --exclude 'guncelle.sh' --exclude 'README.md' --exclude 'KAYNAK.txt' \
+    "$IKOCO/kojojs-dev/medya/" "$HERE/stage/medya/"
+  echo "    $(find "$HERE/stage/medya" -type f | wc -l | tr -d ' ') dosya"
+else
+  echo "*** kojojs-dev/medya yok, atlanıyor (Devre 4 henüz klonda değil)"
+  mkdir -p "$HERE/stage/medya"
+fi
 
 if [ "$KOCO_TOOLCHAIN" = "tr" ]; then
   echo "*** yamalı Türkçe derleyici takas ediliyor (KOCO_TOOLCHAIN=tr)"
