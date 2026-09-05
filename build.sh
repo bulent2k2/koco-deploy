@@ -46,6 +46,56 @@ case "$KOCO_TOOLCHAIN" in
   *) echo "hata: KOCO_TOOLCHAIN '$KOCO_TOOLCHAIN' tanınmıyor (tr ya da en olmalı)" >&2; exit 1;;
 esac
 
+# --- Kaynak klonlarını denetle ---
+# Paketleme yerel klonlardan yapılıyor ve hiçbir adım `git pull` etmiyor; yanlış
+# dalda, kirli ya da origin'in gerisinde bir klon SESSİZCE eski/yarım runtime
+# dağıtır (kojojs-dev ile kojojs-core'un KojoWorld'de ayrışması tam böyle
+# oluştu). Her klon için: doğru dalda mı, commit edilmemiş değişiklik var mı,
+# origin'in gerisinde mi. Gerideyse DUR; origin'in ilerisindeyse (itilmemiş
+# commit) yalnız uyar -- dağıtılan sürüm depoda yoksa geriye izlenemez.
+# Ağ yoksa güncellik denetimi uyarıyla atlanır. Bilerek eski ya da yerel bir
+# sürüm dağıtılacaksa KOCO_SKIP_GIT_CHECK=1 ile tümü atlanır.
+KOCO_SKIP_GIT_CHECK=${KOCO_SKIP_GIT_CHECK:-}
+klon_denetle() {
+  dir=$1; dal=$2
+  if [ ! -d "$dir/.git" ] && ! git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "hata: $dir bir git klonu değil" >&2; exit 1
+  fi
+  simdiki=$(git -C "$dir" rev-parse --abbrev-ref HEAD)
+  if [ "$simdiki" != "$dal" ]; then
+    echo "hata: $dir '$simdiki' dalında, '$dal' bekleniyor (git checkout $dal)" >&2; exit 1
+  fi
+  if [ -n "$(git -C "$dir" status --porcelain)" ]; then
+    echo "hata: $dir kirli (commit edilmemiş değişiklik var)" >&2; exit 1
+  fi
+  if git -C "$dir" fetch -q origin "$dal" 2>/dev/null; then
+    geride=$(git -C "$dir" rev-list --count "HEAD..origin/$dal")
+    ileride=$(git -C "$dir" rev-list --count "origin/$dal..HEAD")
+    if [ "$geride" -gt 0 ]; then
+      echo "hata: $dir origin/$dal'ın $geride commit gerisinde (git pull)" >&2; exit 1
+    fi
+    if [ "$ileride" -gt 0 ]; then
+      echo "    uyarı: $dir origin/$dal'ın $ileride commit ilerisinde (itilmemiş commit dağıtılıyor)" >&2
+    fi
+  else
+    echo "    uyarı: $dir için origin'e ulaşılamadı, güncellik denetimi atlandı" >&2
+  fi
+  echo "    $(basename "$dir"): $dal @ $(git -C "$dir" rev-parse --short HEAD)"
+}
+
+if [ -z "$KOCO_SKIP_GIT_CHECK" ]; then
+  echo "*** kaynak klonları denetleniyor"
+  klon_denetle "$IKOCO/kojojs-core"   master
+  klon_denetle "$IKOCO/kojojs-editor" master
+  # scala-tr jar'ları varsayılan yoldan (kojo klonu) geliyorsa o klonu da denetle;
+  # KOCO_SCALA_TR ile başka bir dizin verildiyse ona karışmayız.
+  if [ "$KOCO_TOOLCHAIN" = "tr" ] && [ -z "${KOCO_SCALA_TR:-}" ]; then
+    klon_denetle "$IKOCO/kojo" master
+  fi
+else
+  echo "*** kaynak klon denetimi atlandı (KOCO_SKIP_GIT_CHECK=1)" >&2
+fi
+
 # sbt'nin `stage` görevi HEDEF DİZİNİ TEMİZLEMİYOR: classpath'ten düşen jar'lar
 # target/universal/stage/lib altında yaşamaya devam ediyor. 2.13 geçişinden
 # sonra bu, 38 ölü 2.12 jar'ı (scala-compiler-2.12.10 dahil) demek -- hem imajı
