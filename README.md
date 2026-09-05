@@ -42,6 +42,11 @@ export KOCO_JDK_EDITOR=/path/to/jdk8
 export KOCO_SCALA_TR=/path/to/kojo/scala-tr/build/pack/lib   # yan yana değilse
 ```
 
+Üçü de isteğe bağlı. macOS'ta JDK'ler boş bırakılırsa `/usr/libexec/java_home`
+listesinden javac'lı ilk uygun sürüm seçilir (core: 11, yoksa 9+; editör: 8);
+sürüm tutmuyorsa `build.sh` sbt'yi başlatmadan durur. scala-tr için yan yana
+klon yoksa `~/src/kojo/git/master/scala-tr/build/pack/lib` denenir.
+
 ```sh
 ./build.sh                 # üç servisi paketler -> stage/ (git'e girmez)
 docker build -t koco .     # yerel test için
