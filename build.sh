@@ -104,40 +104,74 @@ esac
 # sürüm dağıtılacaksa KOCO_SKIP_GIT_CHECK=1 ile tümü atlanır.
 KOCO_SKIP_GIT_CHECK=${KOCO_SKIP_GIT_CHECK:-}
 klon_denetle() {
-  dir=$1; dal=$2
+  dir=$1; dal=$2; kapsam=${3:-}  # dal boşsa şimdiki dal kabul edilir (yalnız
+  # temizlik + güncellik); kapsam verilirse kirlilik yalnız o yol altında aranır
   if [ ! -d "$dir/.git" ] && ! git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
     echo "hata: $dir bir git klonu değil" >&2; exit 1
   fi
   simdiki=$(git -C "$dir" rev-parse --abbrev-ref HEAD)
-  if [ "$simdiki" != "$dal" ]; then
-    echo "hata: $dir '$simdiki' dalında, '$dal' bekleniyor (git checkout $dal)" >&2; exit 1
-  fi
-  if [ -n "$(git -C "$dir" status --porcelain)" ]; then
-    echo "hata: $dir kirli (commit edilmemiş değişiklik var)" >&2; exit 1
-  fi
-  if git -C "$dir" fetch -q origin "$dal" 2>/dev/null; then
-    geride=$(git -C "$dir" rev-list --count "HEAD..origin/$dal")
-    ileride=$(git -C "$dir" rev-list --count "origin/$dal..HEAD")
-    if [ "$geride" -gt 0 ]; then
-      echo "hata: $dir origin/$dal'ın $geride commit gerisinde (git pull)" >&2; exit 1
-    fi
-    if [ "$ileride" -gt 0 ]; then
-      echo "    uyarı: $dir origin/$dal'ın $ileride commit ilerisinde (itilmemiş commit dağıtılıyor)" >&2
-    fi
+  guncellik=1
+  if [ "$simdiki" = HEAD ]; then
+    # ayrık HEAD (etiket/commit checkout): beklenen dal varsa hata; yoksa
+    # güncellik denetlenemez (origin/HEAD yanıltır ya da yoktur), uyarıyla atla
+    [ -z "$dal" ] || { echo "hata: $dir ayrık HEAD'de, '$dal' bekleniyor (git checkout $dal)" >&2; exit 1; }
+    echo "    uyarı: $dir ayrık HEAD'de, güncellik denetimi atlandı" >&2
+    dal="ayrık HEAD"; guncellik=0
   else
-    echo "    uyarı: $dir için origin'e ulaşılamadı, güncellik denetimi atlandı" >&2
+    [ -n "$dal" ] || dal=$simdiki
+    if [ "$simdiki" != "$dal" ]; then
+      echo "hata: $dir '$simdiki' dalında, '$dal' bekleniyor (git checkout $dal)" >&2; exit 1
+    fi
   fi
-  echo "    $(basename "$dir"): $dal @ $(git -C "$dir" rev-parse --short HEAD)"
+  if [ -n "$kapsam" ]; then kirli=$(git -C "$dir" status --porcelain -- "$kapsam")
+  else kirli=$(git -C "$dir" status --porcelain); fi
+  if [ -n "$kirli" ]; then
+    echo "hata: $dir kirli (commit edilmemiş değişiklik var${kapsam:+, $kapsam altında})" >&2; exit 1
+  fi
+  if [ "$guncellik" = 1 ]; then
+    if git -C "$dir" fetch -q origin "$dal" 2>/dev/null; then
+      geride=$(git -C "$dir" rev-list --count "HEAD..origin/$dal")
+      ileride=$(git -C "$dir" rev-list --count "origin/$dal..HEAD")
+      if [ "$geride" -gt 0 ]; then
+        echo "hata: $dir origin/$dal'ın $geride commit gerisinde (git pull)" >&2; exit 1
+      fi
+      if [ "$ileride" -gt 0 ]; then
+        echo "    uyarı: $dir origin/$dal'ın $ileride commit ilerisinde (itilmemiş commit dağıtılıyor)" >&2
+      fi
+    else
+      # fetch iki nedenle düşer: dal origin'de yok (yalnız yerel) ya da ağ yok
+      rc=0; git -C "$dir" ls-remote --exit-code --heads origin "$dal" >/dev/null 2>&1 || rc=$?
+      if [ "$rc" = 2 ]; then
+        echo "    uyarı: $dir: '$dal' dalı origin'de yok (itilmemiş dal dağıtılıyor)" >&2
+      else
+        echo "    uyarı: $dir için origin'e ulaşılamadı, güncellik denetimi atlandı" >&2
+      fi
+    fi
+  fi
+  # etiket: origin deposunun adı (dizin adı yanıltabilir, ör. kojo klonu "master/" altında)
+  ad=$(basename -s .git "$(git -C "$dir" remote get-url origin 2>/dev/null || echo "$dir")")
+  echo "    $ad: $dal @ $(git -C "$dir" rev-parse --short HEAD)"
 }
 
 if [ -z "$KOCO_SKIP_GIT_CHECK" ]; then
   echo "*** kaynak klonları denetleniyor"
   klon_denetle "$IKOCO/kojojs-core"   master
   klon_denetle "$IKOCO/kojojs-editor" master
-  # scala-tr jar'ları varsayılan yoldan (kojo klonu) geliyorsa o klonu da denetle;
-  # KOCO_SCALA_TR ile başka bir dizin verildiyse ona karışmayız.
+  # scala-tr jar'ları varsayılan yollardan (yan yana ya da yedek) geliyorsa
+  # geldikleri klonu da denetle; KOCO_SCALA_TR verildiyse ona karışmayız.
+  # Klon kökü jar dizininden bulunur ($IKOCO/kojo sabit değil: yedek yol başka
+  # bir klonda). Dal adı ZORLANMAZ -- kojo'da yamalı 2.13.18 kendi dalında
+  # (scala-2.13.18-clean-version) yaşıyor; temizlik ve origin'e göre güncellik
+  # denetlenir, sürümü zaten takas adımı doğruluyor.
   if [ "$KOCO_TOOLCHAIN" = "tr" ] && [ -z "${KOCO_SCALA_TR:-}" ]; then
-    klon_denetle "$IKOCO/kojo" master
+    kok=$(git -C "$SCALA_TR" rev-parse --show-toplevel 2>/dev/null || true)
+    if [ -n "$kok" ]; then
+      # kirlilik kapsamı: yamalı derleyicinin kaynağı olan scala-tr ağacı; kojo'nun
+      # kalanındaki alakasız bir değişiklik dağıtımı durdurmasın
+      klon_denetle "$kok" "" "$(cd "$SCALA_TR/../../.." && pwd)"
+    else
+      echo "    uyarı: $SCALA_TR bir git klonunda değil, klon denetimi atlandı" >&2
+    fi
   fi
 else
   echo "*** kaynak klon denetimi atlandı (KOCO_SKIP_GIT_CHECK=1)" >&2
