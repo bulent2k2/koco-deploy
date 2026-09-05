@@ -78,6 +78,19 @@ Aksi halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
 | `APPLICATION_SECRET` | Play gizli anahtarı |
 | `COMPILER_INSTANCES` | eşzamanlı derleyici süreci sayısı (varsayılan 2) |
 | `PUBLIC_URL` | genel adresi elle belirle; yoksa `SPACE_HOST` / `FLY_APP_NAME` / yerelden türetilir |
+| `KOCO_ORNEKLER` | editörün `/ornek/<yol>` ile sunduğu örnek dizini (imajda `/app/ornekler`) |
+
+## Örnek betikler (`/ornek/<yol>`)
+
+`build.sh`, `kojojs-dev/ornekler` dizinini (ikojo örnekleri + `masaustu/` altındaki
+masaüstü Koco betikleri; yalnız `.kojo`, `.kojo.installed`, `README.md`,
+`KAYNAK.txt`, `*.tsv`) `stage/ornekler` → `/app/ornekler` olarak imaja alır ve
+`start.sh` editöre `KOCO_ORNEKLER=/app/ornekler` verir. Editör
+`/ornek/01-ilk-adimlar.kojo` ya da
+`/ornek/masaustu/src/main/resources/samples/tr/fern.kojo` gibi bir adresi, dosyanın
+`// #yükle` satırlarını genişletip düzenleme penceresinde açar (kojojs-editor
+`koco.OrnekYukleyici`). Bu yüzden `kojojs-dev` klonu da `build.sh`'ın klon
+denetimine girer (`master`, `ornekler/` altı temiz).
 
 ## Tuzaklar
 

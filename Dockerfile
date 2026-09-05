@@ -32,6 +32,8 @@ COPY schema-h2.sql     /app/schema-h2.sql
 COPY stage/router   /app/router
 COPY stage/compiler /app/compiler
 COPY stage/editor   /app/editor
+# Örnek betikler (kojojs-dev/ornekler); editör /ornek/<yol> ile sunar (KOCO_ORNEKLER, start.sh)
+COPY stage/ornekler /app/ornekler
 
 RUN chmod +x /app/start.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin/* \
  && mkdir -p /var/lib/nginx /var/log/nginx /app/logs \

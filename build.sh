@@ -157,6 +157,8 @@ if [ -z "$KOCO_SKIP_GIT_CHECK" ]; then
   echo "*** kaynak klonları denetleniyor"
   klon_denetle "$IKOCO/kojojs-core"   master
   klon_denetle "$IKOCO/kojojs-editor" master
+  # örnek betikler de imaja giriyor (/ornek/<yol>); kirlilik yalnız ornekler/ altında aranır
+  klon_denetle "$IKOCO/kojojs-dev"    master ornekler
   # scala-tr jar'ları varsayılan yollardan (yan yana ya da yedek) geliyorsa
   # geldikleri klonu da denetle; KOCO_SCALA_TR verildiyse ona karışmayız.
   # Klon kökü jar dizininden bulunur ($IKOCO/kojo sabit değil: yedek yol başka
@@ -200,6 +202,16 @@ mkdir -p "$HERE/stage"
 rsync -a --delete "$IKOCO/kojojs-core/router/target/universal/stage/"          "$HERE/stage/router/"
 rsync -a --delete "$IKOCO/kojojs-core/compiler-server/target/universal/stage/" "$HERE/stage/compiler/"
 rsync -a --delete "$IKOCO/kojojs-editor/server/target/universal/stage/"        "$HERE/stage/editor/"
+
+# Örnek betikler: editörün /ornek/<yol> rotası (Application.ornek) bunları
+# KOCO_ORNEKLER dizininden okur (start.sh: /app/ornekler). Yalnız betikler ve
+# damga/rapor dosyaları alınır; araç betikleri (ornekleri-dogrula.sh vb.) kalır.
+echo "*** kojojs-dev/ornekler toplanıyor"
+rsync -a --delete --prune-empty-dirs \
+  --include '*/' --include '*.kojo' --include '*.kojo.installed' \
+  --include 'README.md' --include 'KAYNAK.txt' --include '*.tsv' --exclude '*' \
+  "$IKOCO/kojojs-dev/ornekler/" "$HERE/stage/ornekler/"
+echo "    $(find "$HERE/stage/ornekler" -name '*.kojo*' | wc -l | tr -d ' ') betik"
 
 if [ "$KOCO_TOOLCHAIN" = "tr" ]; then
   echo "*** yamalı Türkçe derleyici takas ediliyor (KOCO_TOOLCHAIN=tr)"
