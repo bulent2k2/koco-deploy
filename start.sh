@@ -40,6 +40,10 @@ export SCALAFIDDLE_COMPILER_URL="$PUBLIC_URL"
 # "Authorization callback URL" bununla AYNI olmalı: <adres>/authenticate/github
 export SCALAFIDDLE_AUTH_URL="${SCALAFIDDLE_AUTH_URL:-$PUBLIC_URL/authenticate}"
 
+# Editörün /ornek/<yol> rotasının okuduğu örnek betikler (Dockerfile: stage/ornekler).
+# application.conf'taki varsayılan (../kojojs-dev/ornekler) geliştirme klonu için.
+export KOCO_ORNEKLER="${KOCO_ORNEKLER:-/app/ornekler}"
+
 # Servisler arası konuşma konteyner içinde localhost üzerinden
 export SCALAFIDDLE_ROUTER_URL="ws://localhost:8880/compiler"
 export SCALAFIDDLE_SOURCE_URL="http://localhost:9000/raw/"
