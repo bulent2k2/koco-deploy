@@ -104,11 +104,12 @@ esac
 # sürüm dağıtılacaksa KOCO_SKIP_GIT_CHECK=1 ile tümü atlanır.
 KOCO_SKIP_GIT_CHECK=${KOCO_SKIP_GIT_CHECK:-}
 klon_denetle() {
-  dir=$1; dal=$2
+  dir=$1; dal=$2  # dal boşsa şimdiki dal kabul edilir (yalnız temizlik + güncellik)
   if [ ! -d "$dir/.git" ] && ! git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
     echo "hata: $dir bir git klonu değil" >&2; exit 1
   fi
   simdiki=$(git -C "$dir" rev-parse --abbrev-ref HEAD)
+  [ -n "$dal" ] || dal=$simdiki
   if [ "$simdiki" != "$dal" ]; then
     echo "hata: $dir '$simdiki' dalında, '$dal' bekleniyor (git checkout $dal)" >&2; exit 1
   fi
@@ -127,17 +128,28 @@ klon_denetle() {
   else
     echo "    uyarı: $dir için origin'e ulaşılamadı, güncellik denetimi atlandı" >&2
   fi
-  echo "    $(basename "$dir"): $dal @ $(git -C "$dir" rev-parse --short HEAD)"
+  # etiket: origin deposunun adı (dizin adı yanıltabilir, ör. kojo klonu "master/" altında)
+  ad=$(basename -s .git "$(git -C "$dir" remote get-url origin 2>/dev/null || echo "$dir")")
+  echo "    $ad: $dal @ $(git -C "$dir" rev-parse --short HEAD)"
 }
 
 if [ -z "$KOCO_SKIP_GIT_CHECK" ]; then
   echo "*** kaynak klonları denetleniyor"
   klon_denetle "$IKOCO/kojojs-core"   master
   klon_denetle "$IKOCO/kojojs-editor" master
-  # scala-tr jar'ları varsayılan yoldan (kojo klonu) geliyorsa o klonu da denetle;
-  # KOCO_SCALA_TR ile başka bir dizin verildiyse ona karışmayız.
+  # scala-tr jar'ları varsayılan yollardan (yan yana ya da yedek) geliyorsa
+  # geldikleri klonu da denetle; KOCO_SCALA_TR verildiyse ona karışmayız.
+  # Klon kökü jar dizininden bulunur ($IKOCO/kojo sabit değil: yedek yol başka
+  # bir klonda). Dal adı ZORLANMAZ -- kojo'da yamalı 2.13.18 kendi dalında
+  # (scala-2.13.18-clean-version) yaşıyor; temizlik ve origin'e göre güncellik
+  # denetlenir, sürümü zaten takas adımı doğruluyor.
   if [ "$KOCO_TOOLCHAIN" = "tr" ] && [ -z "${KOCO_SCALA_TR:-}" ]; then
-    klon_denetle "$IKOCO/kojo" master
+    kok=$(git -C "$SCALA_TR" rev-parse --show-toplevel 2>/dev/null || true)
+    if [ -n "$kok" ]; then
+      klon_denetle "$kok" ""
+    else
+      echo "    uyarı: $SCALA_TR bir git klonunda değil, klon denetimi atlandı" >&2
+    fi
   fi
 else
   echo "*** kaynak klon denetimi atlandı (KOCO_SKIP_GIT_CHECK=1)" >&2

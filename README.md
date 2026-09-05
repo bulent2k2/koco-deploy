@@ -60,10 +60,13 @@ Kaynaktan Docker içinde derleyemiyoruz: `kojojs-editor` hâlâ sbt 0.13 ve
 bakıyor (`kojojs-core` Faz 3'te sbt 1'e geçti ve Maven Central'dan çözülüyor) —
 paketleme sıcak bir `~/.ivy2` ile yerelde yapılmalı.
 
-`build.sh` paketlemeden önce üç kaynak klonunu (`kojojs-core`, `kojojs-editor`
-ve `KOCO_TOOLCHAIN=tr` için `kojo`) denetler: `master` dalında, temiz ve
-`origin`'in gerisinde değilse devam eder; aksi halde durur. Bilerek eski ya da
-yerel bir sürüm dağıtmak için `KOCO_SKIP_GIT_CHECK=1`.
+`build.sh` paketlemeden önce kaynak klonlarını denetler: `kojojs-core` ve
+`kojojs-editor` `master` dalında, temiz ve `origin`'in gerisinde değilse devam
+eder; `KOCO_TOOLCHAIN=tr` için scala-tr jar'larının geldiği klon (yan yana
+`kojo` ya da yedek yol, hangisi bulunduysa) yalnız temizlik ve güncellik için
+denetlenir — dal adı zorlanmaz (kojo'da yamalı 2.13.18 kendi dalında). Aksi
+halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
+`KOCO_SKIP_GIT_CHECK=1`.
 
 ## Ortam değişkenleri
 
