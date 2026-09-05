@@ -34,6 +34,8 @@ COPY stage/compiler /app/compiler
 COPY stage/editor   /app/editor
 # Örnek betikler (kojojs-dev/ornekler); editör /ornek/<yol> ile sunar (KOCO_ORNEKLER, start.sh)
 COPY stage/ornekler /app/ornekler
+# Ses/görüntü dosyaları (kojojs-dev/medya); nginx /media/ yolunu buraya bağlar
+COPY stage/medya    /app/medya
 
 RUN chmod +x /app/start.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin/* \
  && mkdir -p /var/lib/nginx /var/log/nginx /tmp/nginx-client /app/logs \

@@ -12,6 +12,13 @@ yinele(4) {
 
 **Canlı:** https://ikojo.fly.dev
 
+## Medya (`/media/...`)
+
+Masaüstü Koco betikleri sesleri ve giysileri `Ses.vuruş` = `/media/collidium/hit.mp3`
+gibi sabitlerle kullanır. `build.sh` kojojs-dev'deki `medya/` dizinini
+`stage/medya` → `/app/medya` olarak imaja alır; `nginx.conf` `/media/` isteklerini
+oraya bağlar (7 gün önbellek). Yeni dosya eklemek için kojojs-dev `medya/guncelle.sh`.
+
 ## Mimari
 
 Tek konteynerde üç JVM servisi ve önlerinde nginx:

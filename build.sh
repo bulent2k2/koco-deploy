@@ -213,6 +213,14 @@ rsync -a --delete --prune-empty-dirs \
   "$IKOCO/kojojs-dev/ornekler/" "$HERE/stage/ornekler/"
 echo "    $(find "$HERE/stage/ornekler" -name '*.kojo*' | wc -l | tr -d ' ') betik"
 
+# Ses/görüntü dosyaları: masaüstü betikleri "/media/..." yollarını kullanır;
+# nginx.conf /media/ yolunu /app/medya dizinine bağlar.
+echo "*** kojojs-dev/medya toplanıyor"
+mkdir -p "$HERE/stage/medya"
+rsync -a --delete --exclude 'guncelle.sh' --exclude 'README.md' --exclude 'KAYNAK.txt' \
+  "$IKOCO/kojojs-dev/medya/" "$HERE/stage/medya/"
+echo "    $(find "$HERE/stage/medya" -type f | wc -l | tr -d ' ') dosya"
+
 if [ "$KOCO_TOOLCHAIN" = "tr" ]; then
   echo "*** yamalı Türkçe derleyici takas ediliyor (KOCO_TOOLCHAIN=tr)"
   # Yama yalnızca compiler + reflect'te (bkz. kojo/scala-tr/turkish-keywords.patch);
