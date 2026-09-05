@@ -34,8 +34,12 @@ COPY stage/compiler /app/compiler
 COPY stage/editor   /app/editor
 
 RUN chmod +x /app/start.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin/* \
- && mkdir -p /var/lib/nginx /var/log/nginx /tmp/nginx-client /app/logs \
+ && mkdir -p /var/lib/nginx /var/log/nginx /app/logs \
  && chown -R koco:koco /app /var/lib/nginx /var/log/nginx
+# /tmp/nginx-* burada YARATILMAZ: start.sh çalışma anında koco olarak yaratıyor.
+# Önceden root'la yaratılan /tmp/nginx-client, koco kullanıcısıyla koşan nginx'e
+# yazılamaz kalıyordu; bellek tamponunu (~10 KB) aşan her /compile gövdesi diske
+# yazılamayıp nginx 500 veriyordu -- canlıda büyük betikler derlenemiyordu.
 
 # logback ./logs/application.log'a yazmak istiyor; CWD yazılabilir olmalı
 WORKDIR /app
