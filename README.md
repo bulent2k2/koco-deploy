@@ -64,8 +64,9 @@ paketleme sıcak bir `~/.ivy2` ile yerelde yapılmalı.
 `kojojs-editor` `master` dalında, temiz ve `origin`'in gerisinde değilse devam
 eder; `KOCO_TOOLCHAIN=tr` için scala-tr jar'larının geldiği klon (yan yana
 `kojo` ya da yedek yol, hangisi bulunduysa) yalnız temizlik ve güncellik için
-denetlenir — dal adı zorlanmaz (kojo'da yamalı 2.13.18 kendi dalında). Aksi
-halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
+denetlenir — dal adı zorlanmaz (kojo'da yamalı 2.13.18 kendi dalında), kirlilik
+yalnız `scala-tr` ağacında aranır, ayrık HEAD'de güncellik uyarıyla atlanır.
+Aksi halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
 `KOCO_SKIP_GIT_CHECK=1`.
 
 ## Ortam değişkenleri
