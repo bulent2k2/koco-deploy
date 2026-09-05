@@ -50,9 +50,15 @@ fly deploy                 # Fly.io'ya
 ```
 
 `stage/` **kasıtlı olarak** git'te yok: `build.sh`'ın ürettiği 214 MB'lık türev.
-Kaynaktan Docker içinde derleyemiyoruz, çünkü her iki `plugins.sbt` de artık ölü
-olan `http://repo.typesafe.com` çözümleyicisine bakıyor — paketleme sıcak bir
-`~/.ivy2` ile yerelde yapılmalı.
+Kaynaktan Docker içinde derleyemiyoruz: `kojojs-editor` hâlâ sbt 0.13 ve
+`plugins.sbt`'si artık ölü olan `http://repo.typesafe.com` çözümleyicisine
+bakıyor (`kojojs-core` Faz 3'te sbt 1'e geçti ve Maven Central'dan çözülüyor) —
+paketleme sıcak bir `~/.ivy2` ile yerelde yapılmalı.
+
+`build.sh` paketlemeden önce üç kaynak klonunu (`kojojs-core`, `kojojs-editor`
+ve `KOCO_TOOLCHAIN=tr` için `kojo`) denetler: `master` dalında, temiz ve
+`origin`'in gerisinde değilse devam eder; aksi halde durur. Bilerek eski ya da
+yerel bir sürüm dağıtmak için `KOCO_SKIP_GIT_CHECK=1`.
 
 ## Ortam değişkenleri
 
@@ -82,10 +88,11 @@ Bu kurulumu yeniden üretecek olan için, pahalıya mal olmuş dersler:
   gönderiyor. curl göndermediği için curl testi bu hatayı yakalamaz.
 - **Veritabanı şeması kendiliğinden kurulmuyor.** `tables.sql` bir PostgreSQL
   *kurulum* betiği (`CREATE ROLE`/`CREATE DATABASE`/`GRANT`) ve Play evolutions
-  kurulu değil, yani bellek-içi H2 boş açılıyor; GitHub girişi
+  kurulu değil, yani H2 boş açılıyor; GitHub girişi
   `Table "user" not found` ile patlıyor. `schema-h2.sql` + H2'nin
-  `INIT=RUNSCRIPT`'i bunu çözüyor. **Veri hâlâ kalıcı değil** -- kalıcılık için
-  `SCALAFIDDLE_SQL_URL` ile gerçek Postgres gerekiyor.
+  `INIT=RUNSCRIPT`'i bunu çözüyor. Veri `/data` Fly volume'ündeki H2 dosyasında
+  kalıcı (`start.sh`, `H2_URL`); çok makineli kurulum için
+  `SCALAFIDDLE_SQL_URL` ile gerçek Postgres gerekir.
 - **Port bekleme zaman aşımı ölümcül olmamalı.** Fly'ın paylaşımlı çekirdeğinde
   editör 100+ sn'de açılabiliyor; `exit` edersen makine sonsuz döngüye girer.
 
