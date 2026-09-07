@@ -1,0 +1,28 @@
+// Yazı (String), Harf, Sayı/Kesir uzantıları, Matematik, Belki, Bölümselİşlev, aralıklar.
+dez y = "Merhaba Dünya"
+gerekli(y.büyükHarfe == "MERHABA DÜNYA" && y.küçükHarfe == "merhaba dünya", "büyük/küçük harf")
+gerekli(y.boyu == 13 && y.başındaMı("Mer") && y.sonundaMı("nya") && y.içeriyorMu("ba D"), "yazı sorguları")
+gerekli(y.böl(" ").boyu == 2 && y.böl(" ")(1) == "Dünya", "böl")
+gerekli(y.tersi == "aynüD abahreM" && y.al(3) == "Mer" && y.düşür(8) == "Dünya", "tersi/al/düşür")
+gerekli("42".sayıya == 42 && "3.5".kesire == 3.5 && "abc".sayıyaBelki.yokMu && "7".sayıyaBelki == Biri(7), "dönüşümler")
+gerekli(y.değiştir("Dünya", "Koco") == "Merhaba Koco", "değiştir: " + y.değiştir("Dünya", "Koco"))
+gerekli("  x ".kısalt == "x" && "|abc".kenarPayınıÇıkar == "abc", "kısalt (trim) / kenarPayınıÇıkar (stripMargin)")
+gerekli("a".kıyasla("b") < 0 && "Kojo".eşitMiKüçükHarfBüyükHarfAyrımıYapmadan("KOJO"), "kıyasla")
+gerekli("abc".harf(1) == 'b' && "abc".işle(_.büyükHarfe) == "ABC" && "a-b".böl("-").yazıYap("+") == "a+b", "harf/işle")
+gerekli("merhaba".ilkHarfiBüyült == "Merhaba" && "ab" * 2 == "abab", "ilkHarfiBüyült/çarpma")
+dez h: Harf = 'a'
+gerekli(h.büyükHarfe == 'A' && h.harfMi && !h.sayıMı && 'ı'.büyükHarfe == 'I' && 'İ'.küçükHarfe == 'i' && 'i'.büyükHarfe == 'İ', "harf")
+gerekli((5).yazıya == "5" && (7).kesire == 7.0 && (-4).mutlakDeğer == 4 && (2).enİrisi(9) == 9, "sayı uzantıları")
+gerekli((3.7).taban == 3.0 && (3.2).tavan == 4.0 && (3.7).sayıya == 3 && (2.5).yakın == 3, "kesir uzantıları")
+gerekli(yuvarla(3.14159, 2) == 3.14 && karekökü(16.0) == 4.0 && kuvveti(2, 10) == 1024.0, "matematik 1")
+gerekli(enİriOrtakPayda(12, 18) == 6 && enUfakOrtakKat(4, 6) == 12 && ortalama(Dizik(1.0, 2.0, 3.0)) == 2.0, "matematik 2")
+gerekli(mutlakDeğer(Matematik.piSayısı - 3.14159265) < 1e-6 && mutlakDeğer(sinüs(Matematik.piSayısı / 2) - 1) < 1e-9 && mutlakDeğer(kosinüs(0) - 1) < 1e-9 && mutlakDeğer(dereceye(Matematik.piSayısı) - 180) < 1e-9, "trigonometri (radyan)")
+gerekli(mutlakDeğer(açı(0.0, 0.0, 1.0, 1.0) - 45) < 1e-9 && mutlakDeğer(uzaklık(0.0, 0.0, 3.0, 4.0) - 5) < 1e-9, "açı/uzaklık")
+gerekli(bölünüyorMu(10, 5) && !bölünüyorMu(10, 3) && işareti(-3) == -1, "bölünüyorMu/işareti")
+gerekli((1 |-| 3).toList == List(1, 2, 3) && (1 |- 3).toList == List(1, 2) && Sayılar(3, 1, 2).sorted == Yöney(1, 2, 3), "aralıklar")
+gerekli(Sayı.Enİrisi == Int.MaxValue && Sayı.EnUfağı == Int.MinValue, "Sayı sınırları")
+gerekli(Biri(5).işle(_ * 2).alYoksa(0) == 10 && (Hiçbiri: Belki[Sayı]).alYoksa(7) == 7 && varMı(Biri(1)), "Belki")
+dez bi: Bölümselİşlev[Sayı, Yazı] = { durum 1 => "bir" }
+gerekli(bi.tanımlıMı(1) && !bi.tanımlıMı(2), "bölümsel işlev")
+gerekli(rastgele(10) < 10 && rastgele(5, 6) == 5 && rastgeleKesir(1.0) < 1.0, "rastgele")
+satıryaz("TAMAM: yazı/sayı/matematik")

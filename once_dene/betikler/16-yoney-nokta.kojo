@@ -1,0 +1,27 @@
+// Nokta, Dikdörtgen (PIXI türleri) ve Yöney2B (oyun fiziği, JTS üstünden).
+dez n = Nokta(3, 4)
+gerekli(n.uzaklığı(Nokta(0, 0)) == 5.0 && mutlakDeğer(n.açısı(Nokta(4, 5)) - 45) < 1e-9, "nokta uzaklık/açı")
+gerekli(n.taşınmış(1, 1).x == 4.0 && Nokta.sıfır.x == 0.0, "taşınmış/sıfır")
+dez Nokta(nx, ny) = Nokta(7, 8)
+gerekli(nx == 7.0 && ny == 8.0, "nokta ayrıştırma")
+dez kopya = n.kopyası; n.x = 99
+gerekli(kopya.x == 3.0, "kopya bağımsız")
+gerekli(uzaklık(Nokta(0, 0), Nokta(3, 4)) == 5.0 && mutlakDeğer(açı(Nokta(0, 0), Nokta(1, 1)) - 45) < 1e-9, "serbest uzaklık/açı")
+dez dd = Dikdörtgen(0, 0, 10, 20)
+gerekli(dd.eni == 10.0 && dd.boyu == 20.0 && dd.merkezi.x == 5.0 && dd.merkezi.y == 10.0, "dikdörtgen")
+gerekli(dd.içeriyorMu(Nokta(5, 5)) && !dd.içeriyorMu(Nokta(50, 5)), "içeriyorMu")
+gerekli(dd.solu == 0.0 && dd.sağı == 10.0 && dd.altı == 0.0 && dd.üstü == 20.0, "kenarlar")
+dez h = Yöney2B(3, 4)
+gerekli(mutlakDeğer(h.boyu - 5) < 1e-9 && mutlakDeğer(h.boyunKaresi - 25) < 1e-9, "yöney boy")
+gerekli(mutlakDeğer(h.boyunuBirYap.boyu - 1) < 1e-9 && mutlakDeğer(h.içÇarpım(Yöney2B(1, 0)) - 3) < 1e-9, "birim/iç çarpım")
+gerekli(mutlakDeğer(h.uzaklığı(Yöney2B(0, 0)) - 5) < 1e-9 && mutlakDeğer(h.sınırla(1).boyu - 1) < 1e-9, "uzaklık/sınırla")
+gerekli((h + Yöney2B(1, 1)).x == 4.0 && (h * 2).x == 6.0 && (-h).x == -3.0 && (h - Yöney2B(1, 1)).y == 3.0, "aritmetik")
+gerekli(Yöney2B.sıfır.boyu == 0.0 && mutlakDeğer(Yöney2B.açıdan(90).y - 1) < 1e-9, "sıfır/açıdan")
+gerekli(mutlakDeğer(h.döndür(90).x + 4) < 1e-9 && mutlakDeğer(h.açısı(Yöney2B(1, 0)) - 53.130102) < 1e-5, "döndür/açısı")
+dez Yöney2B(hx, hy) = Yöney2B(7, 8)
+gerekli(hx == 7.0 && hy == 8.0, "yöney ayrıştırma")
+dez r = Resim.daire(5)
+dez konum: Nokta = r.konum
+dez sınır: Dikdörtgen = r.sınırları
+gerekli(konum.x == 0.0, "çizilmemiş resmin konumu")
+satıryaz("TAMAM: yöney/nokta")
