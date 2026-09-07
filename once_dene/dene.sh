@@ -11,14 +11,14 @@
 # Seçenekler
 #   -t          tarayıcıda da çalıştır (node + playwright gerekir; bkz. tarayici/package.json)
 #   -g          sonuçları sonuclar/ altına yaz (TSV + ekran görüntüleri); yoksa yalnız ekrana
-#   -s SANİYE   tarayıcıda betik başına bekleme (varsayılan 5)
+#   -s SANİYE   tarayıcıda betik başına EN ÇOK bekleme (varsayılan 20); TAMAM/HATA görünür görünmez geçilir
 #   -k DİZİN    tarayıcı kitaplıkları (pixi/jsts/howler .min.js); varsayılan: $KOCO/assets/javascript/
 #               adresinden tarayici/kitaplik/ dizinine indirilir (bir kez)
 #   KOCO_NOT    (ortam) TSV başlığına eklenecek not, ör. "core dd43d64, dev 32fb2f1, editor aa4e682"
 #
 # Durumlar
 #   derleme : geçti / kaldı (derleyici hata verdi) / sunucu (HTTP 200 gelmedi -- sunucunun sorunu)
-#   çalışma : geçti / kaldı (sayfa hatası; gerekli(...) tutmayınca da bu) / eksik ("TAMAM" yazılmadı)
+#   çalışma : geçti / kaldı (sayfa hatası; gerekli(...) tutmayınca da bu; çıktıda "HATA:") / eksik (sürede "TAMAM" yazılmadı)
 #
 # Çıkış kodu: herhangi bir "kaldı" ya da "eksik" varsa 1 (sunucu 2), yoksa 0.
 #
@@ -30,7 +30,7 @@ KOCO="${KOCO:-https://ikojo.fly.dev}"
 KOCO_NOT="${KOCO_NOT:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-TARAYICI=""; GUNCELLE=""; SANIYE=5; KITAPLIK=""
+TARAYICI=""; GUNCELLE=""; SANIYE=20; KITAPLIK=""
 while getopts "tgs:k:h" opt; do
   case $opt in
     t) TARAYICI=1 ;;
@@ -77,6 +77,9 @@ object ScalaFiddle {
     import svTurtle._
     import trTurtle._
 PRE
+  # Router derleme sonucunu KAYNAK ÖZETİYLE önbellekler: betik değişmemişse eski çalışma zamanıyla
+  # bağlanmış JS'i geri verir. Her koşu gerçek bir derleme olsun diye gövdeye zaman damgalı yorum girer.
+  printf '// once_dene %s\n' "$(date +%s)$$"
   cat "$1"
   printf '\n}\n'
 }
@@ -169,17 +172,17 @@ elif d.get('jsCode'):
 
   if [ -n "$TARAYICI" ] && [ "$durum" = "geçti" ]; then
     gorsel=""; [ -n "$GUNCELLE" ] && gorsel="$GORSEL_DIZINI/${ad%.kojo}.png"
-    satir=$(node "$DIR/tarayici/cizdir.js" "$js_yolu" "$SANIYE" $gorsel | python3 -c "
+    satir=$(node "$DIR/tarayici/cizdir.js" "$js_yolu" "$SANIYE" "$gorsel" | python3 -c "
 import sys,json
 d=json.loads(sys.stdin.readline() or '{}')
 h=' | '.join(d.get('hatalar',[]))[:300]; u=' | '.join(d.get('uyarilar',[]))[:200]
 c=d.get('cikti','').replace('\n',' | ')[:200]
-print('\t'.join(str(x) for x in [d.get('durum','kaldı'), d.get('pixi',''), d.get('cizim',''), d.get('kare',''), d.get('cocuk',''), d.get('dokuOnbellegi',''), h, u, c]))")
+print('\t'.join(str(x) for x in [d.get('durum','kaldı'), d.get('sure',''), d.get('pixi',''), d.get('cizim',''), d.get('kare',''), d.get('cocuk',''), d.get('dokuOnbellegi',''), h, u, c]))")
     c_durum=$(printf '%s' "$satir" | cut -f1)
-    c_hata=$(printf '%s' "$satir" | cut -f7)
+    c_hata=$(printf '%s' "$satir" | cut -f8)
     case "$c_durum" in
-      geçti) c_gecti=$((c_gecti+1)); echo "    ▶ çalıştı  (PIXI $(printf '%s' "$satir" | cut -f2), çizim $(printf '%s' "$satir" | cut -f3), çocuk $(printf '%s' "$satir" | cut -f5))" ;;
-      eksik) c_eksik=$((c_eksik+1)); echo "    ▶ eksik -- TAMAM yazılmadı: $(printf '%s' "$satir" | cut -f9)" ;;
+      geçti) c_gecti=$((c_gecti+1)); echo "    ▶ çalıştı  $(printf '%s' "$satir" | cut -f2)s (PIXI $(printf '%s' "$satir" | cut -f3), çizim $(printf '%s' "$satir" | cut -f4), çocuk $(printf '%s' "$satir" | cut -f6))" ;;
+      eksik) c_eksik=$((c_eksik+1)); echo "    ▶ eksik -- ${SANIYE}s içinde TAMAM yazılmadı: $(printf '%s' "$satir" | cut -f10)" ;;
       *) c_kaldi=$((c_kaldi+1)); echo "    ▶ KALDI -- $c_hata" ;;
     esac
     printf '%s\t%s\n' "$ad" "$satir" >> "$c_sonuc"
@@ -199,8 +202,8 @@ if [ -n "$GUNCELLE" ]; then
   if [ -n "$TARAYICI" ]; then
     { echo "# once_dene/dene.sh tarayıcı sonucu -- $(date -u +%Y-%m-%d) -- $KOCO${KOCO_NOT:+ -- $KOCO_NOT} -- betik başına ${SANIYE}s"
       echo "# geçti: $c_gecti   kaldı: $c_kaldi   eksik: $c_eksik"
-      printf 'betik\tdurum\tpixi\tçizim\tkare\tçocuk\tdokuÖnbelleği\thatalar\tuyarılar\tçıktı\n'; cat "$c_sonuc"; } > "$DIR/sonuclar/calisma.tsv"
-    echo "yazıldı: sonuclar/calisma.tsv (+ sonuclar/gorseller/*.png)"
+      printf 'betik\tdurum\tsüre\tpixi\tçizim\tkare\tçocuk\tdokuÖnbelleği\thatalar\tuyarılar\tçıktı\n'; cat "$c_sonuc"; } > "$DIR/sonuclar/calisma.tsv"
+    echo "yazıldı: sonuclar/calisma.tsv (+ sonuclar/gorseller/*.png -- git'e girmez)"
   fi
 fi
 

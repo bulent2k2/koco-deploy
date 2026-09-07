@@ -2,11 +2,12 @@
 //
 //   node cizdir.js <derlenmiş.js> <saniye> <ekran-görüntüsü.png>
 //
-// Çıktı: tek satır JSON -- durum (geçti/kaldı), hatalar, sayfa çıktısı (#output), PIXI sürümü,
-// çizim sayısı, kare sayısı, sahnedeki çocuk sayısı, doku önbelleği. dene.sh bunu TSV'ye işler.
+// Çıktı: tek satır JSON -- durum (geçti/kaldı/eksik), süre (s), hatalar, sayfa çıktısı (#output),
+// PIXI sürümü, çizim/kare/çocuk sayıları, doku önbelleği. dene.sh bunu TSV'ye işler.
 //
 // "kaldı" ölçütü: sayfa hatası (pageerror -- gerekli(...) tutmayınca fırlayan hata da budur),
-// betiğin ölçüm kancasına düşen hata, ya da başlatma hatası. Ağ/medya yüklenememesi (dosya://
+// betiğin ölçüm kancasına düşen hata, başlatma hatası, ya da çıktıda "HATA:" ile başlayan satır
+// (söz/Future içindeki denetimler sayfa hatası üretemez; betik onları böyle bildirir). Ağ/medya yüklenememesi (dosya://
 // koşusunda /media yok) UYARI sayılır, kaldı değil.
 //
 // --allow-file-access-from-files: sahne.html ile derlenmiş JS ayrı dizinlerde; bu bayrak olmadan
@@ -40,7 +41,22 @@ const path = require('path');
   try {
     await sayfa.goto(sahne);
     await sayfa.waitForFunction('window.OLCUM && window.OLCUM.basladi === true', { timeout: 30000 });
-    await sayfa.waitForTimeout(saniye * 1000);
+    // Sabit bekleme yerine: çıktıda TAMAM ya da HATA: görünene, ya da bir sayfa hatası düşene dek
+    // bekle; `saniye` yalnız ÜST SINIR (inceleme bulgusu: kare sayısına bağlı betikler makine
+    // hızına bağımlı kalmasın). Süre TSV'ye yazılır; "eksik" = bu sürede bitmedi demek.
+    const t0 = Date.now();
+    let ilkHata; const hataSozu = new Promise(r => { ilkHata = r; });
+    sayfa.on('pageerror', () => ilkHata());
+    if (sayfaHatalari.length) ilkHata();
+    await Promise.race([
+      sayfa.waitForFunction(() => {
+        const o = document.getElementById('output'); const t = o ? o.innerText : '';
+        return /TAMAM|HATA:/.test(t) || (window.OLCUM && window.OLCUM.hatalar.length > 0);
+      }, { timeout: saniye * 1000, polling: 100 }).catch(() => null),
+      hataSozu,
+    ]);
+    sonuc.sure = +((Date.now() - t0) / 1000).toFixed(1);
+    await sayfa.waitForTimeout(300); // son çizim ve çıktı yerleşsin
     const o = await sayfa.evaluate(() => {
       const O = window.OLCUM;
       const cocuk = O.sahne && O.sahne.children ? O.sahne.children.length : -1;
@@ -59,6 +75,7 @@ const path = require('path');
     sonuc.hatalar.push('koşu: ' + String(e.message || e).split('\n')[0].slice(0, 300));
   }
   sonuc.uyarilar = [...new Set(uyarilar)].slice(0, 12);
+  if (/(^|\n)HATA:/.test(sonuc.cikti)) sonuc.hatalar.push('çıktıda HATA: ' + (sonuc.cikti.match(/HATA:[^\n]*/) || [''])[0].slice(0, 200));
   if (sonuc.hatalar.length) sonuc.durum = 'kaldı';
   else if (!/TAMAM/.test(sonuc.cikti)) sonuc.durum = 'eksik'; // betik "TAMAM" yazmadı: erken bitti ya da takıldı
   console.log(JSON.stringify(sonuc));

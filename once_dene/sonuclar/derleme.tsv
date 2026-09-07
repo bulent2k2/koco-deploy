@@ -1,4 +1,4 @@
-# once_dene/dene.sh derleme sonucu -- 2026-09-07 -- http://127.0.0.1:8880 -- yerel kurulum: kojojs-core dd43d64 (PR #11) + kojojs-dev 32fb2f1, tarayıcı kitaplığı kojojs-editor aa4e682 (PIXI 5.3.12), Türkçe derleyici scala-tr 2.13.18
+# once_dene/dene.sh derleme sonucu -- 2026-09-07 -- http://127.0.0.1:8880 -- yerel kurulum: kojojs-core dd43d64 (PR #11) üstüne kojojs-dev 3ba6992 (#37) senkronu, tarayıcı kitaplığı kojojs-editor aa4e682 (PIXI 5.3.12), Türkçe derleyici scala-tr 2.13.18
 # geçti: 22   kaldı: 0   sunucu: 0
 betik	durum	özet
 01-kaplumbaga-temel.kojo	geçti	

@@ -58,6 +58,7 @@ klon yoksa `~/src/kojo/git/master/scala-tr/build/pack/lib` denenir.
 ./build.sh                 # üç servisi paketler -> stage/ (git'e girmez)
 docker build -t koco .     # yerel test için
 docker run --rm -p 7860:7860 --memory 4g koco
+KOCO=http://localhost:7860 once_dene/dene.sh -t -g   # dağıtım öncesi deneme: 22 betik derlenir + tarayıcıda koşar (bkz. once_dene/README.md)
 fly deploy                 # Fly.io'ya
 ```
 
