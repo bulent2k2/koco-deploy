@@ -1,0 +1,8 @@
+{
+  "name": "koco-once-dene-tarayici",
+  "private": true,
+  "description": "once_dene betiklerini başsız Chromium'da çalıştıran koşucu (dene.sh -t)",
+  "dependencies": {
+    "playwright": "^1.45.0"
+  }
+}

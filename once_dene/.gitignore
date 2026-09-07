@@ -1,0 +1,6 @@
+# dene.sh'nin ürettiği ya da indirdiği şeyler -- git'e girmez
+tarayici/kitaplik/
+tarayici/node_modules/
+tarayici/package-lock.json
+sonuclar/js/
+tarayici/assets/
