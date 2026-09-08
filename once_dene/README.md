@@ -39,6 +39,43 @@ editör klonundan almak için `-k <editor>/server/src/main/assets/javascript`.
 Router derleme sonuçlarını kaynak özetiyle önbelleklediği için `dene.sh` her betiğin başına zaman
 damgalı bir yorum koyar; böylece her koşu gerçekten derlenir (yeni çalışma zamanı, eski JS değil).
 
+### Yerel router + derleyici sunucusuna karşı koşmak
+
+Bir kojojs-dev dalını canlıya çıkmadan denemek için `kojojs-core`'dan yerel bir
+router (8880) ve derleyici sunucusu kurulabilir. Dört tuzak var:
+
+1. **Türkçe jar'lar staging'de eziliyor.** `compilerServer/stage` stok Maven
+   jar'larını koyuyor; yamalı derleyiciyi geri koymak gerek:
+   ```sh
+   D=compiler-server/target/universal/stage/lib
+   P=<kojo>/scala-tr/build/pack/lib
+   cp $P/scala-compiler.jar $D/org.scala-lang.scala-compiler-2.13.18.jar
+   cp $P/scala-reflect.jar  $D/org.scala-lang.scala-reflect-2.13.18.jar
+   ```
+2. **Kütüphane listesi.** Router `extLibs`'i `http://localhost:9000/libraries/2.13`
+   adresinden (editörden) okuyor; editör ayakta değilse liste boş kalıyor, ama
+   router `defaultLibs`'i (scalajs-dom, scalatags) yine de her isteğe ekliyor ve
+   derleyici `Library ... is not allowed` diyor. Router'a boş bir liste dosyası
+   vermek yetiyor:
+   ```sh
+   echo '[]' > /tmp/libs.json
+   ./router/target/universal/stage/bin/scalafiddle-router '-Dfiddle.extLibs={"2.13":"file:/tmp/libs.json"}'
+   ```
+   (`defaultLibs`'i boşaltmak ÇÖZÜM DEĞİL: scalajs-dom olmadan çalışma zamanı
+   bağlanmıyor -- "Cannot access module for non-module org.scalajs.dom.package$".)
+3. **Router gzip yanıt veriyor**; elle `curl` ile derlerken `--compressed` şart.
+4. **Süreç öldürürken `pkill -f` KULLANMAYIN**: kalıp kendi kabuğunuzla da eşleşip
+   oturumu düşürüyor. Yalnız java süreçlerini seçin:
+   ```sh
+   ps -eo pid,comm,args | awk '$2=="java" && /scalafiddle-core/ {print $1}' | xargs -r kill
+   ```
+
+Sonra: `KOCO=http://127.0.0.1:8880 ./dene.sh -t`
+
+Tarayıcı tarafında, Playwright'ın kendi indirdiği sürüm kapta yoksa hazır olanı
+gösterin: `KOCO_CHROMIUM=/opt/pw-browsers/chromium`. (kojojs-dev'in kendi
+tarayıcı testleri için karşılığı `KOJO_CHROME=/opt/pw-browsers/chromium ./test-tarayici.sh`.)
+
 ### Geçici görünmezlikleri yakalamak: `ornekle.js`
 
 `dene.sh` "betik geçti mi" sorusuna bakar; betik sonunda `TAMAM` yazdığı sürece
@@ -66,6 +103,36 @@ dönüyor. `batches.length` ise doğrudan PIXI'nin kendi kararı.
 Çıkış kodu: derleme ya da çalışma zamanında "kaldı"/"eksik" varsa 1, sunucu hatası varsa 2.
 Dağıtım akışında `build.sh` → `docker run` → `KOCO=http://localhost:7860 ./dene.sh -t -g`
 → yeşilse `fly deploy` şeklinde kullanılması düşünüldü.
+
+### Tuzak: Türkçe anahtar kelimeler değişken adı olamaz
+
+Yamalı derleyici (`kojo/scala-tr`) Scala'nın **her** anahtar kelimesine bir Türkçe
+karşılık tanımlıyor, ve o karşılıklar da anahtar kelime -- yani betikte (ve sonda
+kodunda) **değişken, parametre ya da yöntem adı olarak kullanılamıyorlar**. Günlük
+Türkçede çok geçen sözcükler olduğu için bu tuzağa düşmek kolay; hata iletisi de
+("illegal start of simple pattern") sebebi söylemiyor.
+
+En sık çarpılanlar:
+
+| kaçın | çünkü | yerine |
+|---|---|---|
+| `son` | `final` | `bitiş`, `sonuncu` |
+| `yeni` | `new` | `yenisi`, `taze` |
+| `üst` | `super` | `yukarıdaki`, `üstü` |
+| `yoksa` | `else` | `boşsaÖbürü`, `değilse` |
+| `tür` | `type` | `türü`, `çeşit` |
+| `bu` | `this` | `bunu`, `şu` |
+| `dene` | `try` | `deneme`, `sonda` |
+| `durum` | `case` | `durumu`, `hâl` |
+| `yok` | `null` | `yoklama`, `boş` |
+| `doğru` / `yanlış` | `true` / `false` | -- (zaten değer) |
+
+Tam liste: `kojo/src/main/scala/net/kogics/kojo/lite/i18n/tr/dict.scala`
+içindeki `turkishKeywords` (40 sözcük) ve `keywordTranslation`.
+
+Aynı tuzak **kabuk betiklerinde de var ama başka sebeple**: bash Türkçe karakterli
+değişken adı kabul etmiyor, o yüzden `dene.sh` ve `ornekleri-dogrula.sh` içindeki
+değişken adları ASCII.
 
 ## Durumlar
 
