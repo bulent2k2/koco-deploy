@@ -13,6 +13,7 @@ once_dene/
   betikler/*.kojo         22 deneme betiği (aşağıdaki tablo)
   tarayici/sahne.html     editörün resultframe.scala.html'inin başsız eşi (aynı öğe kimlikleri)
   tarayici/cizdir.js      Playwright koşucusu: hata, çıktı, PIXI sürümü, çizim/kare sayıları
+  tarayici/ornekle.js     tek betiği koşarken PIXI'nin iç durumunu ZAMAN İÇİNDE örnekler (aşağıya bak)
   tarayici/package.json   playwright bağımlılığı (npm install; npx playwright install chromium)
   sonuclar/derleme.tsv    son derleme sonucu (betik, durum, özet)
   sonuclar/calisma.tsv    son tarayıcı sonucu (durum, süre, pixi, çizim, kare, çocuk, doku, hata, uyarı, çıktı)
@@ -37,6 +38,30 @@ editör klonundan almak için `-k <editor>/server/src/main/assets/javascript`.
 
 Router derleme sonuçlarını kaynak özetiyle önbelleklediği için `dene.sh` her betiğin başına zaman
 damgalı bir yorum koyar; böylece her koşu gerçekten derlenir (yeni çalışma zamanı, eski JS değil).
+
+### Geçici görünmezlikleri yakalamak: `ornekle.js`
+
+`dene.sh` "betik geçti mi" sorusuna bakar; betik sonunda `TAMAM` yazdığı sürece
+arada bir şeyin **geçici olarak kaybolmuş** olduğunu göremez. `ornekle.js` tam
+buna bakar -- tek bir derlenmiş betiği koşarken PIXI'nin iç durumunu 0,7 sn'de bir
+örnekler:
+
+```sh
+KOCO_CHROMIUM=/opt/pw-browsers/chromium node tarayici/ornekle.js sonuclar/js/05-gradyanlar.js 12
+```
+
+Her örnekte kaplumbağa yolundaki Graphics için `b` (`geometry.batches.length`) ve
+`p` (`graphicsData.length`) yazılır. **`b=0` iken `p>0` ise şekiller var ama PIXI
+o kareyi bomboş çiziyor** -- çıktıdaki `korOrnek` bu örneklerin sayısıdır.
+PIXI 5'in `validateBatching`'i geçersiz dokulu tek bir parça görünce Graphics'in
+TAMAMI için batch kurmaz; kaplumbağanın bütün çizimi tek Graphics olduğu için
+uzaktan yüklenen bir `DokumaBoya` beklenirken önceki her şey de kaybolur
+(kojojs-dev#40 böyle bulundu ve böyle doğrulandı).
+
+Tuvalden piksel okumak bu ölçüm için güvenilir değil: başsız swiftshader'da
+Playwright'ın öğe ekran görüntüsü canlı durumu yansıtmıyor (ölçüldü: farklı
+sürümler aynı görüntüyü verdi) ve `renderer.plugins.extract` tamamen saydam
+dönüyor. `batches.length` ise doğrudan PIXI'nin kendi kararı.
 
 Çıkış kodu: derleme ya da çalışma zamanında "kaldı"/"eksik" varsa 1, sunucu hatası varsa 2.
 Dağıtım akışında `build.sh` → `docker run` → `KOCO=http://localhost:7860 ./dene.sh -t -g`
