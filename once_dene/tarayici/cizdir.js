@@ -30,6 +30,14 @@ const path = require('path');
   sayfa.on('console', m => {
     const t = m.text().split('\n')[0]; // yığın izleri değil, ilk satır (PIXI'nin kullanımdan kalkma uyarıları çok satırlı)
     if (!t.trim() || /^\s*at /.test(t) || /willReadFrequently/.test(t)) return; // yığın izi; Chromium'un Canvas2D ipucu (PIXI yazı ölçümü)
+    // GPU sürücüsünün BAŞARIM ipuçları: makineye/sürücüye özgü, koddan gelmiyor
+    // ("[.WebGL-0x1040016d600]GL Driver Message (OpenGL, Performance, ...): GPU
+    // stall due to ReadPixels"). Kayda değer değiller ve zararsız da değiller:
+    // her iletinin bağlam adresi (0x...) farklı olduğu için aşağıdaki new Set
+    // tekilleştirmesi bunları birleştiremiyor, 12 yuvayı doldurup GERÇEK bir
+    // uyarıyı dışarı itebiliyorlar. Yalnız "Performance" türü eleniyor; aynı
+    // biçimdeki Error/Deprecated iletileri geçmeye devam ediyor.
+    if (/GL Driver Message \([^,)]*,\s*Performance\s*,/.test(t)) return;
     if (m.type() === 'error' || m.type() === 'warning') {
       if (/Failed to load resource|CORS|ERR_FAILED|ERR_FILE_NOT_FOUND|net::/.test(t)) uyarilar.push('kaynak yüklenemedi: ' + t.replace(/^.*?(\/[^' ]+).*$/, '$1').slice(0, 120));
       else uyarilar.push(t.slice(0, 200));
