@@ -29,7 +29,10 @@ BURASI=$(cd "$(dirname "$0")" && pwd)
 
 # H2 jar'ı build ürünü (stage/ .gitignore'da). Yoksa DOĞRULAMA YAPILAMAZ, ve
 # doğrulanmamış yedek üretmektense durmak doğru.
-H2_JAR=${KOCO_H2_JAR:-$(ls "$BURASI"/stage/editor/lib/com.h2database.h2-*.jar 2>/dev/null | head -1)}
+# `|| true` ŞART: `set -euo pipefail` altında glob eşleşmezse `ls` sıfırdan
+# farklı çıkar, pipefail bunu boru hattının durumu yapar ve betik aşağıdaki
+# dostane mesaja HİÇ ULAŞMADAN sessizce ölür (ölçüldü: çıkış 1, çıktı yok).
+H2_JAR=${KOCO_H2_JAR:-$(ls "$BURASI"/stage/editor/lib/com.h2database.h2-*.jar 2>/dev/null | head -1 || true)}
 
 hata() { echo "hata: $*" >&2; exit 1; }
 
@@ -67,7 +70,11 @@ SAYIM=$(java -cp "$H2_JAR" org.h2.tools.Shell \
           -sql 'select count(*) from "fiddle"' 2>&1) \
   || hata "veritabanı AÇILMADI -- bu kopya atılıyor, Fly anlık görüntüsü devrede:
 $SAYIM"
-YAZILIMCIK=$(printf '%s\n' "$SAYIM" | sed -n '2p' | tr -dc '0-9')
+# YALNIZCA-rakam satırını ara. `sed -n 2p` kırılgandı: yukarıdaki 2>&1 stderr'i
+# de $SAYIM'a katıyor, yani JVM tek bir uyarı satırı basarsa 2. satır sayı
+# olmaz ve `tr -dc` oradaki rastgele rakamları ayıklardı ("Java 21" -> 21).
+# `-x` sayesinde "(1 row, 18 ms)" gibi satırlar da elenir.
+YAZILIMCIK=$(printf '%s\n' "$SAYIM" | grep -Ex '[0-9]+' | head -1 || true)
 [ -n "$YAZILIMCIK" ] || hata "yazılımcık sayısı okunamadı:
 $SAYIM"
 echo "    $YAZILIMCIK yazılımcık"
@@ -76,14 +83,20 @@ echo "    $YAZILIMCIK yazılımcık"
 # Açılabilen ama içeriği kaybolmuş bir veritabanı sessizce "iyi" görünür.
 # Bir önceki koşunun sayısıyla karşılaştırmak o sınıfı yakalar.
 DURUM="$DIZIN/.son-sayim"
+ONCEKI=0
 if [ -f "$DURUM" ]; then
   ONCEKI=$(cat "$DURUM")
-  if [ "$YAZILIMCIK" -lt "$ONCEKI" ]; then
-    echo "    UYARI: yazılımcık sayısı DÜŞTÜ ($ONCEKI -> $YAZILIMCIK)." >&2
-    echo "           Yedek yine de alınıyor, ama veri kaybı olabilir; bakın." >&2
-  fi
+  # Dosya elle bozulursa `-lt` stderr'e "integer expression expected" basıp
+  # uyarısız geçerdi; sayı değilse tabanı yok say.
+  case "$ONCEKI" in ''|*[!0-9]*) ONCEKI=0 ;; esac
 fi
-echo "$YAZILIMCIK" > "$DURUM"
+GERILEDI=0
+if [ "$YAZILIMCIK" -lt "$ONCEKI" ]; then
+  GERILEDI=1
+  echo "    UYARI: yazılımcık sayısı DÜŞTÜ ($ONCEKI -> $YAZILIMCIK)." >&2
+  echo "           Yedek yine de alınıyor, ama veri kaybı olabilir; bakın." >&2
+  echo "           Taban KORUNUYOR: bilerek budadıysanız $DURUM dosyasını silin." >&2
+fi
 
 # --- 4. şifrele -----------------------------------------------------------
 # Veritabanı KİŞİSEL VERİ taşıyor: "user" tablosunda ad/e-posta, "access"
@@ -93,13 +106,37 @@ HEDEF="$DIZIN/koco-$DAMGA.mv.db.gpg"
 echo "*** şifreleniyor (AES256)"
 if [ -n "$PAROLA_DOSYASI" ]; then
   [ -f "$PAROLA_DOSYASI" ] || hata "parola dosyası yok: $PAROLA_DOSYASI"
-  gpg --batch --yes --symmetric --cipher-algo AES256 \
+  # --pinentry-mode loopback ŞART: gpg 2.1'den beri --passphrase-file tek
+  # başına YOK SAYILABİLİR ve gpg pinentry'ye düşer. Terminalde sınarken
+  # pinentry açılıp geçtiği için sorun görünmez; cron/launchd'de (tty ve
+  # DISPLAY yok) pinentry açılamaz, betik düşer ve o gece yedek alınmaz --
+  # yani tam da bu kipin var olma sebebi kırılır.
+  gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
       --passphrase-file "$PAROLA_DOSYASI" -o "$HEDEF" "$HAM"
 else
   gpg --symmetric --cipher-algo AES256 -o "$HEDEF" "$HAM"
 fi
 [ -s "$HEDEF" ] || hata "şifreli dosya oluşmadı"
 chmod 600 "$HEDEF"
+
+# Şifreli KATMANI da doğrula: "sınanmamış yedek yedek değil" ilkesi ham dosya
+# kadar gpg çıktısı için de geçerli. 1.5 MB'da gidiş-dönüş bedava.
+# Yalnız parola dosyalı kipte: etkileşimli kipte ikinci bir parola sorusu olurdu.
+if [ -n "$PAROLA_DOSYASI" ]; then
+  echo "*** şifreli kopya geri açılıyor (gidiş-dönüş)"
+  gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$PAROLA_DOSYASI" \
+      -d "$HEDEF" 2>/dev/null | cmp -s - "$HAM" \
+    || hata "şifreli kopya ham dosyayla AYNI DEĞİL -- bu yedeğe güvenilemez: $HEDEF"
+  echo "    aynı"
+fi
+
+# Taban ancak BURADA ilerlesin: şifreleme ya da gidiş-dönüş patlarsa bu koşum
+# başarısız sayılır ve bir sonraki koşum aynı tabana karşı karşılaştırır.
+# Gerileme varsa taban KORUNUR, yoksa uyarı yalnız ilk koşuda çıkar ve ertesi
+# gün düşük sayı yeni normal olurdu -- tam da yakalamak istediğimiz sınıf.
+if [ "$GERILEDI" = 0 ]; then
+  echo "$YAZILIMCIK" > "$DURUM"
+fi
 
 # --- 5. budama ------------------------------------------------------------
 ESKI=$(find "$DIZIN" -name 'koco-*.mv.db.gpg' -type f -mtime +"$TUT_GUN" 2>/dev/null | wc -l | tr -d ' ')
