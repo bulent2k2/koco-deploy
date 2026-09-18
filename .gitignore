@@ -4,3 +4,9 @@ stage/
 
 .DS_Store
 *.log
+
+# Yedekler KİŞİSEL VERİ taşıyor (user: e-posta, access: source_ip) ve bu depo
+# HERKESE AÇIK. yedekle.sh varsayılan olarak ~/koco-yedek altına yazar; yine de
+# yanlışlıkla buraya konursa git almasın.
+koco-*.mv.db.gpg
+koco.mv.db
