@@ -85,6 +85,11 @@ Aksi halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
 | `SILHOUETTE_KEY` | oturum imzalama; verilmezse rastgele üretilir ve **her yeniden başlatmada oturumlar düşer** |
 | `APPLICATION_SECRET` | Play gizli anahtarı |
 | `COMPILER_INSTANCES` | eşzamanlı derleyici süreci sayısı (varsayılan 2) |
+| `KOCO_GOZCU_ARALIK` | derleyici gözcüsünün yoklama sıklığı, sn (varsayılan 5) |
+| `KOCO_GOZCU_ASGARI_OMUR` | bundan kısa yaşayan derleyici "hızlı çöküş" sayılır, sn (varsayılan 60) |
+| `KOCO_GOZCU_GERI_TABAN` / `_TAVAN` | hızlı çöküşte üstel geri çekilmenin tabanı ve tavanı, sn (5 / 300) |
+| `KOCO_GOZCU_NICE` | derleyicilerin nice değeri (varsayılan 10; bkz. `start.sh`) |
+| `KOCO_DERLEYICI_KOMUTU` | gözcünün başlattığı komut; **yalnız sınama için** (varsayılan `/app/compiler/bin/scalafiddle-core`) |
 | `PUBLIC_URL` | genel adresi elle belirle; yoksa `SPACE_HOST` / `FLY_APP_NAME` / yerelden türetilir |
 | `KOCO_ORNEKLER` | editörün `/ornek/<yol>` ile sunduğu örnek dizini (imajda `/app/ornekler`) |
 
