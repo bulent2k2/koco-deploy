@@ -44,6 +44,26 @@ export SCALAFIDDLE_AUTH_URL="${SCALAFIDDLE_AUTH_URL:-$PUBLIC_URL/authenticate}"
 # application.conf'taki varsayılan (../kojojs-dev/ornekler) geliştirme klonu için.
 export KOCO_ORNEKLER="${KOCO_ORNEKLER:-/app/ornekler}"
 
+# Router ile compilerServer arasındaki /compiler WebSocket'inin ve router'ın
+# /durum tanı ucunun anahtarı. reference.conf'taki ÖNTANIMLI DEĞER "secret" ve
+# yukarı akış ScalaFiddle deposunda herkese açık; ayarlanmazsa iki kapı da
+# fiilen korumasız kalıyor. Bugüne kadar ayarlanmıyordu.
+#
+# Rastgele üretmek burada SORUN DEĞİL (SILHOUETTE_KEY'den farkı bu): anahtarı
+# okuyan iki süreç de bu betikten, aynı açılışta başlıyor, yani değer her
+# yeniden başlatmada değişse bile ikisi hep aynısını görüyor. Kullanıcıya
+# yansıyan bir durumu yok -- düşecek oturum, bozulacak çerez yok.
+#
+# Gözcünün yeniden başlattığı compilerServer da bunu miras alıyor (export).
+if [ -z "${SCALAFIDDLE_SECRET:-}" ]; then
+  # Komşudaki SIL_KEY satırından farklı biçim, bilerek: `base64 | tr -dc` önce
+  # üretip sonra `+/` karakterlerini attığı için DEĞİŞKEN uzunluk veriyor
+  # (ölçüldü: 32 yerine 31 çıktı). Böylesi tam 32 karakter garanti ediyor.
+  SCALAFIDDLE_SECRET=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
+  echo "[koco] SCALAFIDDLE_SECRET verilmedi, bu açılış için rastgele üretildi."
+fi
+export SCALAFIDDLE_SECRET
+
 # Servisler arası konuşma konteyner içinde localhost üzerinden
 export SCALAFIDDLE_ROUTER_URL="ws://localhost:8880/compiler"
 export SCALAFIDDLE_SOURCE_URL="http://localhost:9000/raw/"
