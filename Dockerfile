@@ -27,6 +27,8 @@ COPY nginx.conf        /etc/nginx/nginx.conf
 COPY proxy_common.conf /etc/nginx/proxy_common.conf
 COPY start.sh          /app/start.sh
 COPY entrypoint.sh     /app/entrypoint.sh
+# compilerServer süreçlerini başlatan ve ölürlerse geri getiren gözcü
+COPY derleyici-gozcusu.sh /app/derleyici-gozcusu.sh
 COPY schema-h2.sql     /app/schema-h2.sql
 
 COPY stage/router   /app/router
@@ -37,7 +39,7 @@ COPY stage/ornekler /app/ornekler
 # Ses/görüntü dosyaları (kojojs-dev/medya); nginx /media/ yolunu buraya bağlar
 COPY stage/medya    /app/medya
 
-RUN chmod +x /app/start.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin/* \
+RUN chmod +x /app/start.sh /app/derleyici-gozcusu.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin/* \
  && mkdir -p /var/lib/nginx /var/log/nginx /app/logs \
  && chown -R koco:koco /app /var/lib/nginx /var/log/nginx
 # /tmp/nginx-* burada YARATILMAZ: start.sh çalışma anında koco olarak yaratıyor.

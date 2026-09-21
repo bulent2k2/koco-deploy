@@ -185,18 +185,28 @@ echo "[koco] router başlıyor..."
 
 wait_for_port 8880 "router" 180
 
+# Derleyicileri artık GÖZCÜ başlatıyor ve ölürlerse geri getiriyor
+# (derleyici-gozcusu.sh; koco-deploy#17, 3. madde). Eskiden burada düz bir
+# döngü vardı ve ölen süreç GERİ GELMİYORDU: kapasite kalıcı olarak azalıyor,
+# ikisi birden gidince sunucu her derlemeyi "Sunucu şu anda çok yoğun" ile
+# reddediyordu. Ölçüldü (gerçek ikililerle, /durum ucundan): kill -9 sonrası
+# kapasite 1 -> 0 -> 1, üç saniyede geri geliyor.
+#
+# GÖZCÜ BURADA, exec'ten ÖNCE arka plana alınmalı: aşağıdaki `exec nginx`
+# kabuğu devralıyor, yani bu noktadan sonra betiğin kendisi bir şey
+# bekleyemez. Gözcü kendi döngüsünde yaşamaya devam ediyor.
+#
 # nice: Scala.js optimizer'ı tek paylaşımlı çekirdeği doyuruyor (ölçüldü: bir
 # derleme 118 sn). Önceliği düşürmezsek nginx sağlık kontrolüne cevap veremiyor,
 # Fly makineyi derlemenin ORTASINDA öldürüyor ve sonsuz yeniden başlatma oluyor.
-echo "[koco] compilerServer başlıyor (nice 10, $COMPILER_INSTANCES süreç)..."
-i=1
-while [ "$i" -le "$COMPILER_INSTANCES" ]; do
-  # Her sürece kendi kütüphane önbelleği: aynı dizine iki süreç yazarsa
-  # birbirini bozabilir. Coursier önbelleği paylaşılabilir (kendi kilidi var).
-  SCALAFIDDLE_LIBCACHE="/tmp/extlibs-$i" \
-    nice -n 10 /app/compiler/bin/scalafiddle-core $COMPILER_OPTS &
-  i=$((i + 1))
-done
+# Değeri gözcünün öntanımlısı (10); değiştirmek gerekirse KOCO_GOZCU_NICE.
+#
+# Her sürece kendi kütüphane önbelleği (/tmp/extlibs-$i) gözcünün içinde
+# veriliyor: aynı dizine iki süreç yazarsa birbirini bozabilir. Coursier
+# önbelleği paylaşılabilir (kendi kilidi var).
+echo "[koco] compilerServer başlıyor (nice 10, $COMPILER_INSTANCES süreç, gözcülü)..."
+COMPILER_INSTANCES="$COMPILER_INSTANCES" COMPILER_OPTS="$COMPILER_OPTS" \
+  /app/derleyici-gozcusu.sh &
 
 echo "[koco] nginx 7860'ta dinliyor"
 exec nginx -c /etc/nginx/nginx.conf -g 'daemon off;'
