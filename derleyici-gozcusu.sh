@@ -38,13 +38,20 @@ OPTS="${COMPILER_OPTS:-}"
 NICE="${KOCO_GOZCU_NICE:-10}"
 
 ARALIK="${KOCO_GOZCU_ARALIK:-5}"              # yoklama sıklığı (sn)
-ASGARI_OMUR="${KOCO_GOZCU_ASGARI_OMUR:-60}"   # bundan kısa yaşadıysa: hızlı çöküş
+# Bundan kısa yaşadıysa: hızlı çöküş. YANLILIK: ölçülen şey ölüm anı değil
+# TESPİT anı, yani gerçek ömre en çok ARALIK kadar ekleniyor -- 56-60 sn
+# yaşayıp ölen bir süreç "normal ölüm" sayılabilir. 60/5 oranında etkisi
+# yok denecek kadar az; bu ikisiyle oynayacak olan bilsin.
+ASGARI_OMUR="${KOCO_GOZCU_ASGARI_OMUR:-60}"
 GERI_TABAN="${KOCO_GOZCU_GERI_TABAN:-5}"      # ilk geri çekilme (sn)
 GERI_TAVAN="${KOCO_GOZCU_GERI_TAVAN:-300}"    # geri çekilme tavanı (sn)
 
 declare -a PID BASLANGIC ARDISIK YENIDEN
 
-simdi() { date +%s; }
+# printf'in zaman biçimi bash 4.2'den beri var ve süreç ÇATALLAMIYOR;
+# `date +%s` 5 sn'lik yoklamayla günde ~17 bin fork demekti. `wait -n -p`
+# için kaçınılan bash 5.1 bağımlılığını getirmiyor (inceleme notu).
+simdi() { printf '%(%s)T' -1; }
 
 baslat() {
   local i=$1
