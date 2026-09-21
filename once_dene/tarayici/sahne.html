@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<!-- once_dene tarayıcı sahnesi: kojojs-editor'ün resultframe.scala.html'inin başsız eşi.
+     Aynı öğe kimlikleri (fiddle-container, canvas-holder, output, canvas) ve aynı kütüphane
+     sırası (pixi, jsts, howler). Betiğin derlenmiş JS'i ?betik=<ad> ile yüklenir;
+     cizdir.js sayfayı Playwright ile açar, hataları ve ölçümleri toplar. -->
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { margin: 0; background: #fff; }
+    #fiddle-container { width: 800px; height: 600px; position: relative; }
+    #canvas-holder { width: 800px; height: 600px; position: relative; }
+    #output { position: absolute; right: 0; top: 0; max-width: 300px; max-height: 600px; overflow: auto;
+              font: 12px monospace; background: rgba(255,255,255,.85); z-index: 2; }
+    #container { display: none; }
+  </style>
+</head>
+<body>
+  <div id="fiddle-container">
+    <div id="canvas-holder">
+      <div id="output"><pre></pre></div>
+      <canvas id="canvas" style="position: absolute"></canvas>
+    </div>
+  </div>
+  <!-- fiddle.Fiddle "container" adlı bir div de bekliyor (2B tuval); gizli -->
+  <div id="container"><canvas></canvas></div>
+  <script src="kitaplik/pixi.min.js"></script>
+  <script src="kitaplik/jsts.min.js"></script>
+  <script src="kitaplik/howler.min.js"></script>
+  <script>
+    // --- ölçüm: PIXI'den sonra, betikten önce ---
+    PIXI.utils.skipHello && PIXI.utils.skipHello();
+    window.OLCUM = { cizimSayisi: 0, kareler: 0, sahne: null, hatalar: [], basladi: false, bitti: false };
+    function yamala(proto) {
+      if (!proto || !proto.render) return;
+      var asil = proto.render;
+      proto.render = function (nesne) {
+        window.OLCUM.cizimSayisi++;
+        if (nesne && nesne.children) window.OLCUM.sahne = nesne;
+        return asil.apply(this, arguments);
+      };
+    }
+    yamala(PIXI.Renderer && PIXI.Renderer.prototype);           // PIXI 5
+    yamala(PIXI.WebGLRenderer && PIXI.WebGLRenderer.prototype); // PIXI 4
+    yamala(PIXI.CanvasRenderer && PIXI.CanvasRenderer.prototype);
+    (function kalpAtisi() { window.OLCUM.kareler++; requestAnimationFrame(kalpAtisi); })();
+    window.addEventListener('error', function (e) { window.OLCUM.hatalar.push(String(e.message || e.error)); });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e.reason, ne = '';
+      if (r && r.message) ne = r.message;
+      else if (r && r.type) { ne = r.type + ' olayı'; if (r.target && (r.target.src || r.target.currentSrc)) ne += ' (' + String(r.target.src || r.target.currentSrc).slice(0, 100) + ')'; }
+      else ne = String(r);
+      window.OLCUM.hatalar.push('yakalanmamış söz: ' + ne);
+    });
+
+    var betik = new URLSearchParams(location.search).get('betik');
+    if (!betik) {
+      document.getElementById('output').textContent = 'kullanım: sahne.html?betik=<derlenmiş js yolu>';
+    } else {
+      var s = document.createElement('script');
+      s.src = betik;
+      s.onload = function () {
+        // Scala.js dışa aktarımı: nesneye dokunmak üst düzey kodu çalıştırır (resultframe eval'i gibi)
+        try { ScalaFiddle; window.OLCUM.basladi = true; }
+        catch (e) { window.OLCUM.hatalar.push('başlatma: ' + e + '\n' + (e.stack || '')); window.OLCUM.basladi = true; }
+      };
+      s.onerror = function () { window.OLCUM.hatalar.push('betik yüklenemedi: ' + betik); window.OLCUM.basladi = true; };
+      document.body.appendChild(s);
+    }
+  </script>
+</body>
+</html>

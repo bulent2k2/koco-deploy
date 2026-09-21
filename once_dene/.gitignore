@@ -1,0 +1,6 @@
+# dene.sh'nin ürettiği ya da indirdiği şeyler -- git'e girmez
+tarayici/kitaplik/
+tarayici/node_modules/
+sonuclar/js/
+tarayici/assets/
+sonuclar/gorseller/
