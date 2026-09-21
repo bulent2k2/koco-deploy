@@ -84,7 +84,7 @@ Aksi halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
 | `GITHUB_CLIENT_ID` / `_SECRET` | GitHub girişi (yoksa giriş düğmesi çalışmaz) |
 | `SILHOUETTE_KEY` | oturum imzalama; verilmezse rastgele üretilir ve **her yeniden başlatmada oturumlar düşer** |
 | `APPLICATION_SECRET` | Play gizli anahtarı |
-| `SCALAFIDDLE_SECRET` | router ↔ compilerServer `/compiler` kapısının ve `/durum` tanı ucunun anahtarı; verilmezse her açılışta rastgele üretilir (iki süreç de aynı açılıştan aldığı için sorun değil) |
+| `SCALAFIDDLE_SECRET` | router ↔ compilerServer `/compiler` kapısının ve `/durum` tanı ucunun anahtarı; verilmezse her açılışta rastgele üretilir (iki süreç de aynı açılıştan aldığı için sorun değil). **`/durum` konteyner DIŞINDAN yoklanacaksa** (ör. kapasiteyi izleyen bir health check) kalıcı bir değer şart: `flyctl secrets set SCALAFIDDLE_SECRET=…` — rastgele değerle dışarıdaki hiçbir şey o uca kimlik gösteremez |
 | `COMPILER_INSTANCES` | eşzamanlı derleyici süreci sayısı (varsayılan 2) |
 | `KOCO_GOZCU_ARALIK` | derleyici gözcüsünün yoklama sıklığı, sn (varsayılan 5) |
 | `KOCO_GOZCU_ASGARI_OMUR` | bundan kısa yaşayan derleyici "hızlı çöküş" sayılır, sn (varsayılan 60) |

@@ -59,6 +59,14 @@ if [ -z "${SCALAFIDDLE_SECRET:-}" ]; then
   # Komşudaki SIL_KEY satırından farklı biçim, bilerek: `base64 | tr -dc` önce
   # üretip sonra `+/` karakterlerini attığı için DEĞİŞKEN uzunluk veriyor
   # (ölçüldü: 32 yerine 31 çıktı). Böylesi tam 32 karakter garanti ediyor.
+  #
+  # pipefail EKLENİRSE BURAYA BAK: `head` boruyu erken kapatınca `tr` SIGPIPE
+  # ile ölüyor. Bugün sorun yok, çünkü bu betikte yalnız `set -eu` var ve boru
+  # hattının durumu `head`'inki (0). Biri `set -o pipefail` eklerse (yedekle.sh
+  # o deseni kullanıyor) bu atama betiği AÇILIŞTA sessizce düşürür.
+  #
+  # DIŞARIDAN /durum yoklanacaksa rastgele değer işe yaramaz: kalıcı bir
+  # anahtar verin (flyctl secrets set SCALAFIDDLE_SECRET=...). Ayrıntı README.
   SCALAFIDDLE_SECRET=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
   echo "[koco] SCALAFIDDLE_SECRET verilmedi, bu açılış için rastgele üretildi."
 fi
