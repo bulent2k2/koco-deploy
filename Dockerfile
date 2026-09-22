@@ -31,6 +31,7 @@ COPY entrypoint.sh     /app/entrypoint.sh
 COPY derleyici-gozcusu.sh /app/derleyici-gozcusu.sh
 COPY schema-h2.sql     /app/schema-h2.sql
 
+COPY stage/SURUM.txt /app/SURUM.txt
 COPY stage/router   /app/router
 COPY stage/compiler /app/compiler
 COPY stage/editor   /app/editor

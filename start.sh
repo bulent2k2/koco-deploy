@@ -208,6 +208,22 @@ fiddle {
 }
 CONF
 
+# Sürüm damgası -> router'ın /bilgi ucu (kojojs-core#34). build.sh yazıyor,
+# Dockerfile imaja alıyor. Dosya yoksa (damgasız imaj) değişkenler boş kalır ve
+# uç boş alanlarla cevap verir -- açılışı düşürmesi için bir sebep yok.
+if [ -r /app/SURUM.txt ]; then
+  # `.` ile kaynak almıyoruz: dosya build.sh'in ürettiği veri, kabuk kodu değil.
+  # Bir gün içeriği beklenmedik bir şey olursa onu çalıştırmayalım.
+  KOCO_SURUM_CORE=$(sed -n 's/^core=//p'   /app/SURUM.txt)
+  KOCO_SURUM_DEV=$(sed -n 's/^dev=//p'     /app/SURUM.txt)
+  KOCO_SURUM_EDITOR=$(sed -n 's/^editor=//p' /app/SURUM.txt)
+  KOCO_SURUM_TARIH=$(sed -n 's/^tarih=//p' /app/SURUM.txt)
+  export KOCO_SURUM_CORE KOCO_SURUM_DEV KOCO_SURUM_EDITOR KOCO_SURUM_TARIH
+  echo "[koco] sürüm damgası: core=$KOCO_SURUM_CORE dev=$KOCO_SURUM_DEV editor=$KOCO_SURUM_EDITOR ($KOCO_SURUM_TARIH)"
+else
+  echo "[koco] sürüm damgası yok (/app/SURUM.txt); /bilgi boş alanlarla cevap verecek."
+fi
+
 echo "[koco] router başlıyor..."
 /app/router/bin/scalafiddle-router $ROUTER_OPTS -Dconfig.file=/tmp/router.conf &
 

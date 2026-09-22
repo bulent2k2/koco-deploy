@@ -203,6 +203,24 @@ rsync -a --delete "$IKOCO/kojojs-core/router/target/universal/stage/"          "
 rsync -a --delete "$IKOCO/kojojs-core/compiler-server/target/universal/stage/" "$HERE/stage/compiler/"
 rsync -a --delete "$IKOCO/kojojs-editor/server/target/universal/stage/"        "$HERE/stage/editor/"
 
+# SÜRÜM DAMGASI -- /bilgi ucunun derleme zamanı yarısı (kojojs-core#34).
+# "Canlıda hangi ağaç var?" sorusu bugüne kadar ancak bu betiğin GÜNLÜĞÜNE ya
+# da yerel klonlara bakılarak cevaplanıyordu; imajın kendisi söylemiyordu.
+# Buradan geçen değerler start.sh tarafından KOCO_SURUM_* olarak router'a
+# veriliyor.
+#
+# Klon yoksa ya da git okunamazsa boş geçiliyor: damga bir kolaylık, derlemeyi
+# düşürmesi için bir sebep yok.
+damga() { git -C "$1" rev-parse --short HEAD 2>/dev/null || true; }
+{
+  echo "core=$(damga "$IKOCO/kojojs-core")"
+  echo "dev=$(damga "$IKOCO/kojojs-dev")"
+  echo "editor=$(damga "$IKOCO/kojojs-editor")"
+  # UTC: imaj hangi saat diliminde kurulduysa kurulsun okunuşu aynı olsun
+  echo "tarih=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} > "$HERE/stage/SURUM.txt"
+echo "*** sürüm damgası: $(tr '\n' ' ' < "$HERE/stage/SURUM.txt")"
+
 # Örnek betikler: editörün /ornek/<yol> rotası (Application.ornek) bunları
 # KOCO_ORNEKLER dizininden okur (start.sh: /app/ornekler). Yalnız betikler ve
 # damga/rapor dosyaları alınır; araç betikleri (ornekleri-dogrula.sh vb.) kalır.
