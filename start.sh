@@ -105,6 +105,10 @@ EDITOR_OPTS="-J-Xmx640m"
 # almıyor, "No suitable compiler available" ile REDDEDİYOR. Yani eşzamanlı N
 # kullanıcı için N süreç gerekiyor.
 COMPILER_INSTANCES="${COMPILER_INSTANCES:-2}"
+# export: router'ın /bilgi ucu bunu okuyor (derleyiciSayisi). Export edilmezse
+# uç boş gösteriyordu -- ölçüldü. Dışarıdan /saglik?enAz=N kuran taraf N'i
+# buradan doğrulayabilsin diye görünür olması gerekiyor.
+export COMPILER_INSTANCES
 
 # Coursier önbelleğini KALICI diske koy. Aksi halde her yeniden başlatmada
 # jar'lar yeniden indirilip açılıyor ve ilk derleme 30-60 sn gecikiyor.
