@@ -43,3 +43,48 @@ primary_region = 'fra'
   # kullanıcıyı kaldıramıyordu, (c) soğuk derleme 118 sn sürüyordu.
   size = 'shared-cpu-2x'
   memory = '4gb'
+
+# KAPASİTE DENETİMİ -- gözcünün kendisi izlensin (koco-deploy#17, 6. madde).
+#
+# Derleyici gözcüsü (#21) ölen compilerServer'ı geri getiriyor, ama gözcünün
+# kendisi ölürse sistem SESSİZCE eski davranışa dönüyor: kapasite azalıyor ve
+# kimse haberdar olmuyor. Konteyner içinde gözcüye gözcü dikmek aynı sorunun
+# bir üst katmanı; doğru yer dışarısı.
+#
+# NEDEN /saglik, /durum DEĞİL: Fly'ın HTTP denetimi yalnız DURUM KODUNA bakıyor,
+# gövdeyi ayrıştırmıyor. /durum kapasite 0 olsa bile 200 döner (sayı gövdede),
+# üstelik anahtar ister -- ve anahtar bu AÇIK depoya yazılamaz. /saglik
+# anahtarsız, gövdesiz ve kapasite eşiğin altındaysa 503 veriyor
+# (kojojs-core#34).
+#
+# ÖLÇÜLMÜŞ SAYILAR -- bu üçlü rastgele seçilmedi:
+#   grace_period 300s  Açılışta derleyiciler nginx'ten 6 sn sonra kaydoldu
+#                      (v64 yayımı: nginx 00:15:01, "Connection succeeded"
+#                      00:15:07). fly.toml'un tepesindeki not yüklü makinede
+#                      açılışın 3-4 dakikayı bulabildiğini söylüyor; 300s onu
+#                      da kapsıyor. DİKKAT: flyctl'in "1 dakikaya indirilecek"
+#                      uyarısı [[http_service.checks]] içindir, buraya
+#                      uygulanmıyor -- ölçüldü (config validate ikinci bir
+#                      uyarı vermiyor).
+#   interval 60s       Gözcü normal bir ölümü 9.6 saniyede kapatıyor (yerelde
+#                      kill -9 ile ölçüldü). 60 sn'lik örnekleme o pencereye
+#                      neredeyse hiç denk gelmez, yani gözcü çalışırken bu
+#                      denetim boşuna kızarmaz. Yakaladığı şey KALICI kayıp --
+#                      aranan da buydu.
+#   enAz=2             COMPILER_INSTANCES ile aynı sayı. Ölçüt `registered`;
+#                      meşru olarak derleme yapan derleyici kaybedilmiş
+#                      sayılmıyor.
+#
+# TAKAS, açıkça: denetim düşerse Fly makineyi sağlıksız sayar ve yeniden
+# başlatır. Kapasiteyi geri getirir, ama o an derleme bekleyen öğrencinin işi
+# gider. Gözcü varken bunun ender olması bekleniyor; sıklaşırsa eşik değil
+# SEBEP sorgulanmalı.
+[checks]
+  [checks.kapasite]
+    type = "http"
+    port = 8880
+    interval = "60s"
+    timeout = "10s"
+    grace_period = "300s"
+    method = "GET"
+    path = "/saglik?enAz=2"
