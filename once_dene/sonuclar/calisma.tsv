@@ -1,25 +1,25 @@
-# once_dene/dene.sh tarayıcı sonucu -- 2026-09-22 -- http://localhost:7860 -- core 6d18f8d, dev 57c65d4, editor e229dc4 -- betik başına 20s
+# once_dene/dene.sh tarayıcı sonucu -- 2026-09-23 -- http://localhost:7860 -- core 843f0c1, dev 0b3943c, editor e229dc4 -- betik başına 20s
 # geçti: 22   kaldı: 0   eksik: 0
 betik	durum	süre	pixi	çizim	kare	çocuk	dokuÖnbelleği	hatalar	uyarılar	çıktı
-01-kaplumbaga-temel.kojo	geçti	0	5.3.12	6	30	2	5		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	TAMAM: kaplumbağa temel
-02-kaplumbaga-coklu.kojo	geçti	0	5.3.12	6	23	5	4			TAMAM: çoklu kaplumbağa
-03-resim-sekiller.kojo	geçti	0	5.3.12	4	20	8	4		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	TAMAM: resim şekilleri
-04-resim-donusturuculer.kojo	geçti	0	5.3.12	4	19	8	4		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	TAMAM: dönüştürücüler
-05-gradyanlar.kojo	geçti	0	5.3.12	6	13	11	5			TAMAM: gradyanlar
-06-renk-yapicilar.kojo	geçti	0	5.3.12	4	20	32	4			TAMAM: renk yapıcıları
+01-kaplumbaga-temel.kojo	geçti	0	5.3.12	8	34	2	5		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	Not: bu şeklin dolgusunu hesaplamak 37 ms sürdü (151 nokta) -- bir karelik bütçe 16.7 ms. Kendini kesen şekillerde dolgu hesabı nokta sayısıyla karesele yakın büyüyor, yani nokta sayısını yarıya indir
+02-kaplumbaga-coklu.kojo	geçti	0	5.3.12	6	26	5	4			TAMAM: çoklu kaplumbağa
+03-resim-sekiller.kojo	geçti	0	5.3.12	4	21	8	4		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	TAMAM: resim şekilleri
+04-resim-donusturuculer.kojo	geçti	0	5.3.12	4	20	8	4		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	TAMAM: dönüştürücüler
+05-gradyanlar.kojo	geçti	0	5.3.12	6	31	11	5			TAMAM: gradyanlar
+06-renk-yapicilar.kojo	geçti	0	5.3.12	4	19	32	4			TAMAM: renk yapıcıları
 07-yazi.kojo	geçti	0	5.3.12	4	30	10	16			TAMAM: yazı
-08-canlandirma.kojo	geçti	1.5	5.3.12	366	83	6	5			kare süresi (ms): 0 | TAMAM: canlandırma 60 kare, tepki 60
-09-carpisma.kojo	geçti	0.6	5.3.12	10	56	8	4		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	üst düzeyde: kaplumbağa a'ya değiyor mu: true | kaplumbağa a'ya değiyor mu: true | TAMAM: çarpışma
-10-klavye-fare.kojo	geçti	0.6	5.3.12	42	44	5	4			fare: -999999, -999999 | TAMAM: klavye/fare
-11-ses.kojo	geçti	0	5.3.12	4	19	3	5		istek başarısız: file:///media/collidium/hit.mp3 | kaynak yüklenemedi: Failed to load resource: net::ERR_FILE_NOT_FOUND | istek başarısız: file:///media/car-ride/car-move.mp3 | istek başarısız: file:/	müzik çalıyor mu: true | TAMAM: ses
-12-imge-giysi.kojo	geçti	0	5.3.12	22	24	7	10		istek başarısız: file:///media/costumes/car.png | kaynak yüklenemedi: Failed to load resource: net::ERR_FILE_NOT_FOUND | istek başarısız: file:///media/collidium/ball1.png | istek başarısız: file:///m	TAMAM: imge/giysi (dosyalar /media'dan yüklenir)
-13-sahne-tuval.kojo	geçti	0	5.3.12	4	20	7	4			TAMAM: sahne/tuval
-14-koleksiyonlar.kojo	geçti	0	5.3.12	4	34	2	4			TAMAM: koleksiyonlar
+08-canlandirma.kojo	geçti	1.7	5.3.12	366	84	6	5			kare süresi (ms): 0 | TAMAM: canlandırma 60 kare, tepki 60
+09-carpisma.kojo	geçti	0.7	5.3.12	8	56	8	4		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	üst düzeyde: kaplumbağa a'ya değiyor mu: true | kaplumbağa a'ya değiyor mu: true | TAMAM: çarpışma
+10-klavye-fare.kojo	geçti	0.5	5.3.12	42	42	5	4			fare: -999999, -999999 | TAMAM: klavye/fare
+11-ses.kojo	geçti	0	5.3.12	4	20	3	5		istek başarısız: file:///media/collidium/hit.mp3 | kaynak yüklenemedi: Failed to load resource: net::ERR_FILE_NOT_FOUND | istek başarısız: file:///media/car-ride/car-move.mp3 | istek başarısız: file:/	müzik çalıyor mu: true | TAMAM: ses
+12-imge-giysi.kojo	geçti	0	5.3.12	24	24	7	10		istek başarısız: file:///media/costumes/car.png | kaynak yüklenemedi: Failed to load resource: net::ERR_FILE_NOT_FOUND | istek başarısız: file:///media/collidium/ball1.png | istek başarısız: file:///m	TAMAM: imge/giysi (dosyalar /media'dan yüklenir)
+13-sahne-tuval.kojo	geçti	0	5.3.12	4	22	7	4			TAMAM: sahne/tuval
+14-koleksiyonlar.kojo	geçti	0	5.3.12	4	31	2	4			TAMAM: koleksiyonlar
 15-yazi-sayi-matematik.kojo	geçti	0	5.3.12	4	30	2	4			TAMAM: yazı/sayı/matematik
 16-yoney-nokta.kojo	geçti	0	5.3.12	4	30	2	4			TAMAM: yöney/nokta
-17-gelecek-zaman.kojo	geçti	0	5.3.12	12	29	2	4			toplam 0.001 saniye sürdü. | 15:28:12 22.9.2026 | Not: durakla resim çizimini geciktirmez -- yalnız kaplumbağa komutlarını bekletir, resimler hemen çizilir. Resimlerle adım adım ilerlemek için fareyeT
+17-gelecek-zaman.kojo	geçti	0	5.3.12	12	29	2	4			toplam 0.002 saniye sürdü. | 23:34:46 22.9.2026 | Not: durakla resim çizimini geciktirmez -- yalnız kaplumbağa komutlarını bekletir, resimler hemen çizilir. Resimlerle adım adım ilerlemek için fareyeT
 18-hatalar.kojo	geçti	0	5.3.12	4	30	2	4			TAMAM: hatalar
-19-anahtar-kelimeler.kojo	geçti	0	5.3.12	4	28	2	4			TAMAM: anahtar kelimeler
-20-kucuk-oyun.kojo	geçti	6.3	5.3.12	242	141	7	5		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	TAMAM: küçük oyun, 2 sekme
-21-performans-cok-nesne.kojo	geçti	6.2	5.3.12	842	141	6	5			TAMAM: 300 nesne + canlandırma
-22-uc-yildiz.kojo	geçti	3.2	5.3.12	300	174	119	4			TAMAM: üç yıldız, 150 adım
+19-anahtar-kelimeler.kojo	geçti	0	5.3.12	4	29	2	4			TAMAM: anahtar kelimeler
+20-kucuk-oyun.kojo	geçti	6.1	5.3.12	242	138	7	5		libtess yüklü değil: kendini kesen yolların dolgusu YANLIŞ olacak (NON_ZERO yerine earcut). Sayfa libtess.cat.js'i yüklemeli.	TAMAM: küçük oyun, 2 sekme
+21-performans-cok-nesne.kojo	geçti	5.5	5.3.12	842	141	6	5			TAMAM: 300 nesne + canlandırma
+22-uc-yildiz.kojo	geçti	2.6	5.3.12	300	173	119	4			TAMAM: üç yıldız, 150 adım
