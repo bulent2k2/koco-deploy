@@ -86,7 +86,7 @@ Aksi halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
 | `APPLICATION_SECRET` | Play gizli anahtarı |
 | `SCALAFIDDLE_SECRET` | router ↔ compilerServer `/compiler` kapısının ve `/durum` tanı ucunun anahtarı; verilmezse her açılışta rastgele üretilir (iki süreç de aynı açılıştan aldığı için sorun değil). **`/durum` konteyner DIŞINDAN yoklanacaksa** (ör. kapasiteyi izleyen bir health check) kalıcı bir değer şart: `flyctl secrets set SCALAFIDDLE_SECRET=…` — rastgele değerle dışarıdaki hiçbir şey o uca kimlik gösteremez |
 | `COMPILER_INSTANCES` | eşzamanlı derleyici süreci sayısı (varsayılan 2) |
-| `SCALAFIDDLE_COMPILER_RECYCLE_AFTER` | bir derleyici bu kadar cevaptan sonra taze bir JVM'le değiştirilir (varsayılan 200; 0 = kapalı). Gözcü şart: router çıkan derleyicinin yeniden başlatılacağını varsayar (bkz. `start.sh`) |
+| `SCALAFIDDLE_COMPILER_RECYCLE_AFTER` | bir derleyici bu kadar cevaptan sonra taze bir JVM'le değiştirilir (varsayılan 0 = kapalı; taze derleyici ısınmadan açılmamalı, bkz. `start.sh`). Gözcü şart: router çıkan derleyicinin yeniden başlatılacağını varsayar (bkz. `start.sh`) |
 | `SCALAFIDDLE_COMPILER_STALL_TIMEOUT` | bir derleme bundan uzun sürerse derleyici takılmış sayılıp değiştirilir (router öntanımlısı `180s`; `0` = kapalı) |
 | `KOCO_GOZCU_ARALIK` | derleyici gözcüsünün yoklama sıklığı, sn (varsayılan 5) |
 | `KOCO_GOZCU_ASGARI_OMUR` | bundan kısa yaşayan derleyici "hızlı çöküş" sayılır, sn (varsayılan 60) |

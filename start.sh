@@ -117,17 +117,21 @@ export COMPILER_INSTANCES
 # kurulumda yukarıdaki hesaba göre ~870m pay var; 200 cevapta derleyici başına
 # ~200-400 MB büyüme o payın içinde kalıyor.
 #
-# Bedeli: taze derleyicinin İLK derlemesi soğuk (yerelde 18 sn, Fly'da 118 sn
-# ölçülmüştü). Router aynı anda en çok birini yeniliyor, son çalışan
-# derleyiciyi hiç yenilemiyor ve seçimde taze olanı sona bırakıyor; yani
-# soğuk derleme ancak öbür derleyici meşgulken bir kullanıcıya düşüyor.
+# ÖNTANIMLI KAPALI (0), çünkü bedeli ölçülünce beklenenden ağır çıktı. Taze
+# derleyicinin İLK derlemesi soğuk (yerelde 18-30 sn, Fly'da 118 sn
+# ölçülmüştü) ve seçim taze olanı hep sona bıraktığı için sıralı trafikte o
+# derleyici hiç ısınmıyor. Eşi emekli olunca sıradaki istek doğrudan soğuk
+# derleyiciye düşüyor. İmajda RECYCLE_AFTER=5 ile 40 sıralı derleme: her
+# yenilenme turunda iki soğuk derleme (23-30 sn), biri `ask`'ın 30 sn'sini
+# aşıp HTTP 500 aldı. Fly'da bu, her turda #17'nin belirtisini kısa süre geri
+# getirirdi. Taze derleyici kendini ısıtmadan açılmamalı.
 #
 # Bu değer > 0 iken router, çıkan derleyicinin YENİDEN BAŞLATILACAĞINI
 # varsayıyor -- yani gözcüsüz bir kurulumda açılmamalı. Aynı ayar, takılan
 # (180 sn'den uzun Compiling) derleyiciye de Retire yollatıyor: takılmanın
 # sebebi JVM'in kendisiyse aynı süreç geri gelmesin. Kapatmak için 0.
 # (kojojs-core'un bu ayarı tanımayan eski bir sürümünde değişkenin etkisi yok.)
-export SCALAFIDDLE_COMPILER_RECYCLE_AFTER="${SCALAFIDDLE_COMPILER_RECYCLE_AFTER:-200}"
+export SCALAFIDDLE_COMPILER_RECYCLE_AFTER="${SCALAFIDDLE_COMPILER_RECYCLE_AFTER:-0}"
 
 # Coursier önbelleğini KALICI diske koy. Aksi halde her yeniden başlatmada
 # jar'lar yeniden indirilip açılıyor ve ilk derleme 30-60 sn gecikiyor.
