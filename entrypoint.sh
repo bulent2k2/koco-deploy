@@ -12,6 +12,13 @@
 # veritabanını (/data/koco*) okuyup yazabilirdi. Ayrı uid ikisini de kapatıyor.
 # (Bu bir istismarın bulunduğu anlamına gelmiyor; bkz. #18 ve #37.)
 #
+# KAPATMADIKLARI (tehdit modeli, #47 incelemesi): ele geçirilmiş bir derleyici
+#  - başka kullanıcıların DERLEME ÇIKTISINI üretmeye devam ediyor; editörle aynı
+#    kökenden (same-origin) tarayıcıya kötü JS verebilir. Kullanıcı ayrımı
+#    bunu kapatamaz.
+#  - /data/coursier'a (volume, kalıcı) yazabiliyor: zehirli bir jar yeniden
+#    başlatmadan ve JVM yenilenmesinden sağ çıkar. Önbellek bütünlüğü ayrı iş.
+#
 # NEDEN BURADA: start.sh zaten `koco` olarak koşuyor, kendi çocuklarını başka
 # bir uid'e geçiremez. Kullanıcı değiştirmek root ister ve root yalnız burada.
 set -eu
@@ -32,8 +39,22 @@ mkdir -p /data /data/coursier
 chown koco:koco /data
 chmod 711 /data
 find /data -mindepth 1 -maxdepth 1 ! -name coursier -exec chown -R koco:koco {} + -exec chmod -R go-rwx {} +
-chown -R derleyici:derleyici /data/coursier
+# /data/coursier GÜVENİLMEYEN kullanıcının yazabildiği bir dizin: root orada
+# her açılışta özyinelemeli iş YAPMAMALI. Yapsaydı, derleme yolundan açılmış
+# bir sabit bağ (`ln /data/koco.mv.db /data/coursier/x`; protected_hardlinks=0
+# ise okuyamadığı dosyaya da açılabiliyor) bir sonraki açılışta `chown -R`
+# ile veritabanını derleyiciye geçirirdi: veritabanı ona açılır, editöre
+# kapanırdı. Bu yüzden sahiplik göçü (eski imajların koco'ya ait önbelleği)
+# YALNIZ BİR KEZ, dizin henüz derleyicinin değilken; sonrasında derleyicinin
+# yarattığı her şey zaten onun. `chmod` özyinelemesiz, yalnız dizinin kendisi.
+if [ "$(stat -c %u /data/coursier)" != 1001 ]; then
+  chown -R derleyici:derleyici /data/coursier
+fi
 chmod 700 /data/coursier
+# Ek sigorta: sahibi olmadığı dosyaya sabit bağ açmayı çekirdek düzeyinde
+# kapat. systemd bunu 1 yapıyor ama Fly'ın init'i systemd değil; yazılamazsa
+# (izin yok, salt okunur /proc) zararsız, yukarıdaki kural yine koruyor.
+sysctl -qw fs.protected_hardlinks=1 2>/dev/null || true
 
 # nginx access_log /dev/stdout'a yazıyor; o boru root'a ait ve uid düştükten
 # sonra AÇILAMIYOR ("Permission denied"), nginx de sessizce çıkıyor. İki kolun
@@ -88,7 +109,10 @@ export COMPILER_OPTS="${COMPILER_OPTS:--J-Xmx1100m -J-Xss4m}"
   # derleme 30-60 sn gecikir. Yalnız compilerServer kullanıyor.
   export COURSIER_CACHE=/data/coursier
   cd /home/derleyici
-  exec setpriv --reuid=1001 --regid=1001 --clear-groups /app/derleyici-gozcusu.sh
+  # --no-new-privs: derleme yolundan çalışan kod imajdaki setuid ikililerle
+  # (su, passwd, mount...) yetki kazanamasın. Çocuklara miras kalıyor, yani
+  # gözcünün yeniden başlattığı derleyiciler de kapsanıyor.
+  exec setpriv --reuid=1001 --regid=1001 --clear-groups --no-new-privs /app/derleyici-gozcusu.sh
 ) &
 
 # --- Ana kol (uid 1000) ---
