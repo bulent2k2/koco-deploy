@@ -179,6 +179,17 @@ else
   echo "*** kaynak klon denetimi atlandı (KOCO_SKIP_GIT_CHECK=1)" >&2
 fi
 
+# koco-deploy#18: start.sh editörün imzalama anahtarlarını artık -D ile değil
+# ortamdan (SILHOUETTE_KEY) veriyor; onu okuyan satırlar kojojs-editor'ün
+# silhouette.conf'unda. Eski bir editör klonuyla kurulan imajda Silhouette
+# "[changeme]" anahtarlarıyla açılır ve GitHub girişi bozulur. Klon denetimi
+# atlansa bile (KOCO_SKIP_GIT_CHECK) bu denetim koşuyor: bozuk imaj sessiz olur.
+if ! grep -q 'SILHOUETTE_KEY' "$IKOCO/kojojs-editor/server/src/main/resources/silhouette.conf"; then
+  echo "hata: kojojs-editor klonu eski: silhouette.conf SILHOUETTE_KEY'i okumuyor" >&2
+  echo "      (koco-deploy#18; start.sh anahtarları artık ortamdan veriyor). git pull" >&2
+  exit 1
+fi
+
 # sbt'nin `stage` görevi HEDEF DİZİNİ TEMİZLEMİYOR: classpath'ten düşen jar'lar
 # target/universal/stage/lib altında yaşamaya devam ediyor. 2.13 geçişinden
 # sonra bu, 38 ölü 2.12 jar'ı (scala-compiler-2.12.10 dahil) demek -- hem imajı

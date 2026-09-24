@@ -169,10 +169,12 @@ wait_for_port() {
 H2_URL="${H2_URL:-jdbc:h2:/data/koco;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;INIT=RUNSCRIPT FROM '/app/schema-h2.sql'}"
 
 # --- Silhouette (GitHub girişi) ---
-# silhouette.conf'ta imzalama/şifreleme anahtarları "[changeme]" olarak SABİT ve
-# env override'ları YOK. JcaSigner/JcaCrypter bunları AES için kullanıyor; 10
-# karakterlik "[changeme]" hem güvensiz hem çalışmıyor. Typesafe Config'te
-# sistem özellikleri (-D) en yüksek önceliğe sahip olduğu için oradan veriyoruz.
+# silhouette.conf'ta imzalama/şifreleme anahtarları "[changeme]" olarak sabit;
+# JcaSigner/JcaCrypter bunları AES için kullanıyor, "[changeme]" hem güvensiz
+# hem çalışmıyor. kojojs-editor bunları artık SILHOUETTE_KEY ortam
+# değişkeninden okuyor (play.http.secret.key'i de APPLICATION_SECRET'tan).
+# Değerler aşağıda YALNIZ editör sürecinin ortamına veriliyor (bkz. editör
+# başlatma satırı ve koco-deploy#18).
 SIL_KEY="${SILHOUETTE_KEY:-}"
 if [ -z "$SIL_KEY" ]; then
   SIL_KEY=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-32)
@@ -203,19 +205,30 @@ fi
 # taban imajın Java 21'iyle açılıp şu hatayla ölüyordu:
 #   InaccessibleObjectException: ... module java.base does not "opens java.lang"
 # nginx ayakta kaldığı için sonuç 502'ydi, açık bir çökme değil.
-env JAVA_HOME=/opt/java8 \
-/app/editor/bin/server $EDITOR_OPTS \
-  -Dplay.http.secret.key="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}" \
-  -Dsilhouette.authenticator.signer.key="$SIL_KEY" \
-  -Dsilhouette.authenticator.crypter.key="$SIL_KEY" \
-  -Dsilhouette.socialStateHandler.signer.key="$SIL_KEY" \
-  -Dsilhouette.csrfStateItemHandler.signer.key="$SIL_KEY" \
-  -Dsilhouette.oauth1TokenSecretProvider.cookie.signer.key="$SIL_KEY" \
-  -Dsilhouette.oauth1TokenSecretProvider.crypter.key="$SIL_KEY" \
-  -Dsilhouette.authenticator.secureCookie=$SECURE_COOKIE \
-  -Dsilhouette.csrfStateItemHandler.secureCookie=$SECURE_COOKIE \
-  -Dh2.db.url="$H2_URL" \
-  -Dhttp.port=9000 &
+#
+# ANAHTARLAR -D İLE DEĞİL, ORTAMLA (koco-deploy#18): süreç komut satırı
+# (/proc/<pid>/cmdline) herkese okunur ve `ps` çıktısında görünür; eskiden
+# play.http.secret.key ve altı Silhouette anahtarı orada açık duruyordu.
+# Ortam (/proc/<pid>/environ) yalnız sahibine okunur. Bu, aynı kullanıcıdaki
+# süreçlere karşı koruma DEĞİL (onu #37 izliyor); kazara sızmayı kapatıyor.
+#
+# Alt kabukta `export`, `env A=... komut` DEĞİL: `env`'in kendi argv'si de
+# `ps`'te görünür, exec edene kadar kısa bir an bile olsa. export kabuğun
+# yerleşiği, hiçbir sürecin komut satırına düşmüyor. Alt kabuk, değerlerin
+# bu betiğin ortamına -- dolayısıyla sonra başlayan router'a ve gözcü
+# üzerinden derleyicilere -- sızmasını önlüyor. (Fly secret'ları zaten
+# konteynerin ortamında; alt kabuk yalnız buradaki geri düşüş değerlerini
+# ve SIL_KEY'in geçici üretilmişini editöre sınırlıyor.)
+(
+  export APPLICATION_SECRET="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}"
+  export SILHOUETTE_KEY="$SIL_KEY"
+  exec env JAVA_HOME=/opt/java8 \
+  /app/editor/bin/server $EDITOR_OPTS \
+    -Dsilhouette.authenticator.secureCookie=$SECURE_COOKIE \
+    -Dsilhouette.csrfStateItemHandler.secureCookie=$SECURE_COOKIE \
+    -Dh2.db.url="$H2_URL" \
+    -Dhttp.port=9000
+) &
 
 wait_for_port 9000 "editör" 300   # Fly shared-cpu-1x: yerelde 6 sn, orada 100+ sn
 
