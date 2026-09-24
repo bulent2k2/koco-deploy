@@ -25,6 +25,18 @@
 # çocuklarını SIGCHLD ile kendiliğinden topluyor, ölen çocukta `kill -0`
 # başarısız oluyor. (Bu betik `wait` çağırmadığı için bu önemliydi.)
 #
+# ÇIKIŞ KODU OKUNMUYOR, ve bu bir SÖZLEŞME: her ölüm, kodu ne olursa olsun
+# yeniden başlatılıyor. Router (kojojs-core CompilerManager) bir derleyiciyi
+# yenilemek ya da takılmadan kurtarmak için ona Retire yolluyor; derleyici
+# System.exit(0) ile PLANLI olarak çıkıyor (kojojs-core CompileActor) ve
+# yerine taze bir JVM'i bu betiğin başlatması bekleniyor
+# (SCALAFIDDLE_COMPILER_RECYCLE_AFTER, start.sh). Bu betiği ileride "yalnız
+# hata kodunda yeniden başlat" diye değiştirmek, Retire alan her derleyiciyi
+# KALICI olarak kaybettirir: router onu restartGrace (120 sn) boyunca
+# "yeniden başlıyor" sayar, sonra /saglik 503'e döner ve Fly makineyi
+# yeniden başlatır. Çıkış 0 = planlı, 0 dışı = çökme ayrımı yalnız
+# günlükte anlamlı; yeniden başlatma kararında değil.
+#
 # set -e YOK: gözcünün işi düşen süreçle baş etmek; kendi düşerse koruma da
 # gider. -u açık, yazım hatası sessiz kalmasın.
 set -u
