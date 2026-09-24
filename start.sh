@@ -110,6 +110,25 @@ COMPILER_INSTANCES="${COMPILER_INSTANCES:-2}"
 # buradan doğrulayabilsin diye görünür olması gerekiyor.
 export COMPILER_INSTANCES
 
+# Derleyici yenilenmesi (koco-deploy#17, 0. madde): router bir derleyiciyi bu
+# kadar cevaptan sonra emekliye ayırıyor -- derleyici süreci bitiriyor, gözcü
+# (derleyici-gozcusu.sh) TAZE bir JVM başlatıyor. Sebep ölçülmüş bir büyüme:
+# derleme başına ~2 MB düzleşmeyen RSS artışı (konu yorumu, 110 derleme). Bu
+# kurulumda yukarıdaki hesaba göre ~870m pay var; 200 cevapta derleyici başına
+# ~200-400 MB büyüme o payın içinde kalıyor.
+#
+# Bedeli: taze derleyicinin İLK derlemesi soğuk (yerelde 18 sn, Fly'da 118 sn
+# ölçülmüştü). Router aynı anda en çok birini yeniliyor, son çalışan
+# derleyiciyi hiç yenilemiyor ve seçimde taze olanı sona bırakıyor; yani
+# soğuk derleme ancak öbür derleyici meşgulken bir kullanıcıya düşüyor.
+#
+# Bu değer > 0 iken router, çıkan derleyicinin YENİDEN BAŞLATILACAĞINI
+# varsayıyor -- yani gözcüsüz bir kurulumda açılmamalı. Aynı ayar, takılan
+# (180 sn'den uzun Compiling) derleyiciye de Retire yollatıyor: takılmanın
+# sebebi JVM'in kendisiyse aynı süreç geri gelmesin. Kapatmak için 0.
+# (kojojs-core'un bu ayarı tanımayan eski bir sürümünde değişkenin etkisi yok.)
+export SCALAFIDDLE_COMPILER_RECYCLE_AFTER="${SCALAFIDDLE_COMPILER_RECYCLE_AFTER:-200}"
+
 # Coursier önbelleğini KALICI diske koy. Aksi halde her yeniden başlatmada
 # jar'lar yeniden indirilip açılıyor ve ilk derleme 30-60 sn gecikiyor.
 # Volume'de tutunca bu bedel ömürde bir kez ödeniyor.
