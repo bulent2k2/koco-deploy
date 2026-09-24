@@ -196,8 +196,8 @@ fi
 # Editör Java 8 ile koşar (Play 2.6 + eski silhouette Java 21'de sorunlu);
 # router ve compilerServer taban imajın Java 21'ini kullanır (2.13.18 orada
 # doğrulandı). /opt/java8 Dockerfile'ın kurduğu mimariden bağımsız symlink
-# (amd64/arm64 paket dizinleri farklı); `env` tek komut olduğu için araya
-# satır girse de önek kaybolmaz.
+# (amd64/arm64 paket dizinleri farklı). Aşağıdaki alt kabukta export ediliyor,
+# yani yalnız editöre gidiyor; router ve gözcü Java 21'de kalıyor.
 #
 # JAVACMD DEĞİL, JAVA_HOME: sbt-native-packager'ın bash betiği JAVACMD diye bir
 # değişken tanımıyor (bkz. bin/server:105 get_java_cmd -- yalnız JAVA_HOME'a ve
@@ -222,8 +222,8 @@ fi
 (
   export APPLICATION_SECRET="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}"
   export SILHOUETTE_KEY="$SIL_KEY"
-  exec env JAVA_HOME=/opt/java8 \
-  /app/editor/bin/server $EDITOR_OPTS \
+  export JAVA_HOME=/opt/java8
+  exec /app/editor/bin/server $EDITOR_OPTS \
     -Dsilhouette.authenticator.secureCookie=$SECURE_COOKIE \
     -Dsilhouette.csrfStateItemHandler.secureCookie=$SECURE_COOKIE \
     -Dh2.db.url="$H2_URL" \

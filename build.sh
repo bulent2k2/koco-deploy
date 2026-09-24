@@ -184,9 +184,15 @@ fi
 # silhouette.conf'unda. Eski bir editör klonuyla kurulan imajda Silhouette
 # "[changeme]" anahtarlarıyla açılır ve GitHub girişi bozulur. Klon denetimi
 # atlansa bile (KOCO_SKIP_GIT_CHECK) bu denetim koşuyor: bozuk imaj sessiz olur.
-if ! grep -q 'SILHOUETTE_KEY' "$IKOCO/kojojs-editor/server/src/main/resources/silhouette.conf"; then
-  echo "hata: kojojs-editor klonu eski: silhouette.conf SILHOUETTE_KEY'i okumuyor" >&2
-  echo "      (koco-deploy#18; start.sh anahtarları artık ortamdan veriyor). git pull" >&2
+# Aynı kapıdan play.http.secret.key'in APPLICATION_SECRET okuması da geçiyor
+# (application.conf); o bozulursa Play prod'da açılmayı reddeder, yani gürültülü
+# olurdu, ama iki varsayım da burada denetlensin.
+editor_conf="$IKOCO/kojojs-editor/server/src/main/resources"
+if ! grep -q 'SILHOUETTE_KEY' "$editor_conf/silhouette.conf" ||
+   ! grep -q 'APPLICATION_SECRET' "$editor_conf/application.conf"; then
+  echo "hata: kojojs-editor klonu eski: silhouette.conf SILHOUETTE_KEY'i ya da" >&2
+  echo "      application.conf APPLICATION_SECRET'ı okumuyor (koco-deploy#18;" >&2
+  echo "      start.sh anahtarları artık ortamdan veriyor). git pull" >&2
   exit 1
 fi
 
