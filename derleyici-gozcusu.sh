@@ -7,11 +7,13 @@
 # de gidince sunucu her derlemeyi "Sunucu şu anda çok yoğun" ile reddediyor,
 # yani örneğe tıklayan her çocuk hata alıyor.
 #
-# NEDEN AYRI DOSYA: start.sh `exec nginx` ile bitiyor, yani kabuk nginx'e
-# DÖNÜŞÜYOR -- start.sh içinde `wait` tabanlı bir gözcü yazılamaz. Gözcünün
-# exec'ten önce arka planda başlaması gerekiyor. Ayrı dosya olmasının ikinci
-# sebebi: böylece sahte bir derleyici komutuyla (KOCO_DERLEYICI_KOMUTU)
-# konteyner olmadan sınanabiliyor -- bu betiğin mantığı öyle ölçüldü.
+# NEDEN AYRI DOSYA: entrypoint.sh onu `derleyici` kullanıcısıyla (uid 1001,
+# #37), start.sh'ten ayrı bir kol olarak başlatıyor; start.sh koco olarak
+# koştuğu için derleyicileri başka uid'e geçiremezdi. (Eskiden start.sh
+# başlatıyordu; o da `exec nginx` ile bittiği için gözcü zaten ayrı bir
+# arka plan süreci olmak zorundaydı.) İkinci sebep: sahte bir derleyici
+# komutuyla (KOCO_DERLEYICI_KOMUTU, KOCO_GOZCU_ROUTER_PORT=) konteyner
+# olmadan sınanabiliyor -- bu betiğin mantığı öyle ölçüldü.
 #
 # KAPSAM -- yalnız compilerServer. Router ve editör bilerek dışarıda: ikisi de
 # start.sh'te sıralı bekleme (wait_for_port) ile açılıyor ve yeniden
@@ -50,6 +52,8 @@ OPTS="${COMPILER_OPTS:-}"
 NICE="${KOCO_GOZCU_NICE:-10}"
 
 ARALIK="${KOCO_GOZCU_ARALIK:-5}"              # yoklama sıklığı (sn)
+# Derleyicileri başlatmadan önce beklenen router portu; boş = bekleme (sınama).
+ROUTER_PORT="${KOCO_GOZCU_ROUTER_PORT-8880}"
 # Bundan kısa yaşadıysa: hızlı çöküş. YANLILIK: ölçülen şey ölüm anı değil
 # TESPİT anı, yani gerçek ömre en çok ARALIK kadar ekleniyor -- 56-60 sn
 # yaşayıp ölen bir süreç "normal ölüm" sayılabilir. 60/5 oranında etkisi
@@ -67,7 +71,7 @@ simdi() { printf '%(%s)T' -1; }
 
 baslat() {
   local i=$1
-  # Her sürece kendi kütüphane önbelleği (start.sh'teki kural): aynı dizine
+  # Her sürece kendi kütüphane önbelleği: aynı dizine
   # iki süreç yazarsa birbirini bozabiliyor.
   SCALAFIDDLE_LIBCACHE="/tmp/extlibs-$i" nice -n "$NICE" $KOMUT $OPTS &
   PID[$i]=$!
@@ -75,6 +79,26 @@ baslat() {
   YENIDEN[$i]=0
   echo "[koco] derleyici $i başladı (pid ${PID[$i]})"
 }
+
+# ROUTER'I BEKLE. Gözcü artık start.sh'ten değil entrypoint.sh'ten, ayrı bir
+# kullanıcıyla (derleyici, #37) ve router'dan ÖNCE başlıyor; eskiden start.sh
+# onu router'ın portu açıldıktan sonra başlatıyordu. İki sebep:
+#  - Erken başlayan derleyici editörün açılışıyla aynı paylaşımlı çekirdeği
+#    yarıştırır (Fly'da editör 100+ sn açılıyor).
+#  - Eski sıra (önce router, sonra derleyiciler) ölçülmüş ve çalışan sıra;
+#    router'sız bir derleyicinin ilk bağlantı hatasında ne yaptığına
+#    güvenmek yerine onu koruyoruz.
+# Süre sınırı YOK, bilerek: router hiç gelmezse derleyici de işe yaramaz, ve
+# o durumu /saglik?enAz=N denetimi yakalıyor.
+if [ -n "$ROUTER_PORT" ]; then
+  echo "[koco] derleyici gözcüsü router'ı ($ROUTER_PORT) bekliyor..."
+  n=0
+  while ! (exec 3<>"/dev/tcp/127.0.0.1/$ROUTER_PORT") 2>/dev/null; do
+    sleep 1
+    n=$((n + 1))
+  done
+  echo "[koco] router hazır (${n}s), derleyiciler başlıyor"
+fi
 
 i=1
 while [ "$i" -le "$ADET" ]; do

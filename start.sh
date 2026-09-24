@@ -1,13 +1,20 @@
 #!/bin/bash
-# Üç JVM servisi + nginx'i tek konteynerde başlatır.
+# Editör, router ve nginx'i `koco` (uid 1000) olarak başlatır.
+#
+# compilerServer'lar BURADA DEĞİL: entrypoint.sh onları ayrı bir kullanıcıyla
+# (`derleyici`, uid 1001; koco-deploy#37) derleyici-gozcusu.sh üzerinden
+# başlatıyor. Bu betik koco olarak koştuğu için onları başka uid'e geçiremezdi.
 #
 # Sıra ÖNEMLİ ve beklemeli:
-#  - compilerServer router'a WebSocket ile bağlanır; Manager.connect() ilk
-#    denemede başarısız olursa YENİDEN ZAMANLAMIYOR (yalnızca CompilerTerminated
-#    üzerine), o yüzden router'ı beklemek şart.
+#  - compilerServer router'a WebSocket ile bağlanır; router'ı gözcü bekliyor.
 #  - router kütüphane listesini editörden çeker ve refreshLibraries 3000s;
 #    ilk denemeyi kaçırırsa ~50 dakika tekrar denemez.
 set -eu
+
+# Bu kolun yarattığı her dosya yalnız koco'ya (H2 veritabanı, günlükler,
+# /tmp/router.conf, nginx geçicileri). Derleyici kullanıcısı bunları
+# okuyamasın diye (#37); /data'daki eski dosyaları entrypoint.sh daraltıyor.
+umask 077
 
 # Türkçe adlı sınıflar (fiddle'lardaki nesne/sınıf adları dahil) UTF-8 yereli
 # ister: POSIX yerelde JVM dosya adlarını yazamayıp InvalidPathException veriyor
@@ -45,35 +52,14 @@ export SCALAFIDDLE_AUTH_URL="${SCALAFIDDLE_AUTH_URL:-$PUBLIC_URL/authenticate}"
 export KOCO_ORNEKLER="${KOCO_ORNEKLER:-/app/ornekler}"
 
 # Router ile compilerServer arasındaki /compiler WebSocket'inin ve router'ın
-# /durum tanı ucunun anahtarı. reference.conf'taki ÖNTANIMLI DEĞER "secret" ve
-# yukarı akış ScalaFiddle deposunda herkese açık; ayarlanmazsa iki kapı da
-# fiilen korumasız kalıyor. Bugüne kadar ayarlanmıyordu.
-#
-# Rastgele üretmek burada SORUN DEĞİL (SILHOUETTE_KEY'den farkı bu): anahtarı
-# okuyan iki süreç de bu betikten, aynı açılışta başlıyor, yani değer her
-# yeniden başlatmada değişse bile ikisi hep aynısını görüyor. Kullanıcıya
-# yansıyan bir durumu yok -- düşecek oturum, bozulacak çerez yok.
-#
-# Gözcünün yeniden başlattığı compilerServer da bunu miras alıyor (export).
-if [ -z "${SCALAFIDDLE_SECRET:-}" ]; then
-  # Komşudaki SIL_KEY satırından farklı biçim, bilerek: `base64 | tr -dc` önce
-  # üretip sonra `+/` karakterlerini attığı için DEĞİŞKEN uzunluk veriyor
-  # (ölçüldü: 32 yerine 31 çıktı). Böylesi tam 32 karakter garanti ediyor.
-  #
-  # pipefail EKLENİRSE BURAYA BAK: `head` boruyu erken kapatınca `tr` SIGPIPE
-  # ile ölüyor. Bugün sorun yok, çünkü bu betikte yalnız `set -eu` var ve boru
-  # hattının durumu `head`'inki (0). Biri `set -o pipefail` eklerse (yedekle.sh
-  # o deseni kullanıyor) bu atama betiği AÇILIŞTA sessizce düşürür.
-  #
-  # DIŞARIDAN /durum yoklanacaksa rastgele değer işe yaramaz: kalıcı bir
-  # anahtar verin (flyctl secrets set SCALAFIDDLE_SECRET=...). Ayrıntı README.
-  SCALAFIDDLE_SECRET=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
-  echo "[koco] SCALAFIDDLE_SECRET verilmedi, bu açılış için rastgele üretildi."
-fi
+# /durum tanı ucunun anahtarı. entrypoint.sh üretiyor (verilmediyse) ve iki
+# kola da veriyor: derleyici kolu ile bu kol AYNI değeri görmeli. Bu betiği
+# entrypoint'siz koşturmak artık desteklenmiyor -- derleyiciler de gelmez.
+: "${SCALAFIDDLE_SECRET:?entrypoint.sh üzerinden başlatılmalı (SCALAFIDDLE_SECRET yok)}"
 export SCALAFIDDLE_SECRET
 
-# Servisler arası konuşma konteyner içinde localhost üzerinden
-export SCALAFIDDLE_ROUTER_URL="ws://localhost:8880/compiler"
+# Servisler arası konuşma konteyner içinde localhost üzerinden.
+# (SCALAFIDDLE_ROUTER_URL'i yalnız compilerServer okuyor; entrypoint.sh veriyor.)
 export SCALAFIDDLE_SOURCE_URL="http://localhost:9000/raw/"
 export SCALAFIDDLE_EDIT_URL="http://localhost:9000/"
 
@@ -91,8 +77,9 @@ export SCALAFIDDLE_EDIT_URL="http://localhost:9000/"
 # 4 GB makinede: 2 derleyici x 1100m + editör 640m + router 384m = 3224m,
 # JVM ek yükü icin ~870m pay.
 ROUTER_OPTS="-J-Xmx384m"
-COMPILER_OPTS="-J-Xmx1100m -J-Xss4m"
 EDITOR_OPTS="-J-Xmx640m"
+# COMPILER_OPTS (öntanımlı "-J-Xmx1100m -J-Xss4m") entrypoint.sh'te: derleyici
+# kolu oradan başlıyor. Yukarıdaki toplamı değiştiren, ikisine birden baksın.
 
 # Eşzamanlı kullanıcı sayısı.
 #
@@ -133,10 +120,8 @@ export COMPILER_INSTANCES
 # (kojojs-core'un bu ayarı tanımayan eski bir sürümünde değişkenin etkisi yok.)
 export SCALAFIDDLE_COMPILER_RECYCLE_AFTER="${SCALAFIDDLE_COMPILER_RECYCLE_AFTER:-0}"
 
-# Coursier önbelleğini KALICI diske koy. Aksi halde her yeniden başlatmada
-# jar'lar yeniden indirilip açılıyor ve ilk derleme 30-60 sn gecikiyor.
-# Volume'de tutunca bu bedel ömürde bir kez ödeniyor.
-export COURSIER_CACHE="${COURSIER_CACHE:-/data/coursier}"
+# Coursier önbelleği (/data/coursier) yalnız compilerServer'ın; entrypoint.sh
+# derleyici koluna veriyor ve dizin artık derleyici kullanıcısına ait.
 
 mkdir -p /tmp/nginx-client /tmp/nginx-proxy /tmp/nginx-fastcgi /tmp/nginx-uwsgi /tmp/nginx-scgi
 
@@ -269,28 +254,14 @@ echo "[koco] router başlıyor..."
 
 wait_for_port 8880 "router" 180
 
-# Derleyicileri artık GÖZCÜ başlatıyor ve ölürlerse geri getiriyor
-# (derleyici-gozcusu.sh; koco-deploy#17, 3. madde). Eskiden burada düz bir
-# döngü vardı ve ölen süreç GERİ GELMİYORDU: kapasite kalıcı olarak azalıyor,
-# ikisi birden gidince sunucu her derlemeyi "Sunucu şu anda çok yoğun" ile
-# reddediyordu. Ölçüldü (gerçek ikililerle, /durum ucundan): kill -9 sonrası
-# kapasite 1 -> 0 -> 1, üç saniyede geri geliyor.
+# Derleyicileri GÖZCÜ başlatıyor ve ölürlerse geri getiriyor
+# (derleyici-gozcusu.sh; koco-deploy#17, 3. madde) -- ama artık buradan değil,
+# entrypoint.sh'ten, `derleyici` kullanıcısıyla (#37). Gözcü router'ın portu
+# açılana kadar bekliyor, yani yukarıdaki sıra korunuyor.
 #
-# GÖZCÜ BURADA, exec'ten ÖNCE arka plana alınmalı: aşağıdaki `exec nginx`
-# kabuğu devralıyor, yani bu noktadan sonra betiğin kendisi bir şey
-# bekleyemez. Gözcü kendi döngüsünde yaşamaya devam ediyor.
-#
-# nice: Scala.js optimizer'ı tek paylaşımlı çekirdeği doyuruyor (ölçüldü: bir
-# derleme 118 sn). Önceliği düşürmezsek nginx sağlık kontrolüne cevap veremiyor,
-# Fly makineyi derlemenin ORTASINDA öldürüyor ve sonsuz yeniden başlatma oluyor.
-# Değeri gözcünün öntanımlısı (10); değiştirmek gerekirse KOCO_GOZCU_NICE.
-#
-# Her sürece kendi kütüphane önbelleği (/tmp/extlibs-$i) gözcünün içinde
-# veriliyor: aynı dizine iki süreç yazarsa birbirini bozabilir. Coursier
-# önbelleği paylaşılabilir (kendi kilidi var).
-echo "[koco] compilerServer başlıyor (nice 10, $COMPILER_INSTANCES süreç, gözcülü)..."
-COMPILER_INSTANCES="$COMPILER_INSTANCES" COMPILER_OPTS="$COMPILER_OPTS" \
-  /app/derleyici-gozcusu.sh &
+# nice (Scala.js optimizer'ı tek paylaşımlı çekirdeği doyuruyor; önceliği
+# düşmezse nginx sağlık kontrolüne cevap veremiyor) ve süreç başına kütüphane
+# önbelleği (/tmp/extlibs-$i) gözcünün içinde.
 
 echo "[koco] nginx 7860'ta dinliyor"
 exec nginx -c /etc/nginx/nginx.conf -g 'daemon off;'

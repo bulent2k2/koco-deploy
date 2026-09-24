@@ -21,7 +21,20 @@ RUN ln -s /usr/lib/jvm/java-8-openjdk-* /opt/java8 \
  && /opt/java8/bin/java -version
 
 # HF Spaces konteyneri root olmayan kullanıcıyla çalışır
-RUN useradd -m -u 1000 koco
+#
+# İKİ kullanıcı (koco-deploy#37): editör, router ve nginx `koco` (1000);
+# compilerServer'lar `derleyici` (1001). compilerServer kullanıcıdan gelen
+# rastgele kaynağı derliyor ve kum havuzu yok; aynı uid'de koşsaydı editörün
+# ortamını (/proc/<pid>/environ: APPLICATION_SECRET, SILHOUETTE_KEY) ve H2
+# veritabanını okuyup yazabilirdi. Ayrım entrypoint.sh'te kuruluyor.
+# Ev dizinleri 700: öbür kullanıcı içine bakamasın (Ubuntu'nun öntanımlısına
+# güvenmiyoruz, açık yazıyoruz).
+# derleyici'nin grubu da açıkça 1001: entrypoint.sh --regid=1001 ile düşüyor;
+# gid başka bir gruba aitse groupadd imaj derlemesinde patlasın, sessiz kalmasın.
+RUN useradd -m -u 1000 koco \
+ && groupadd -g 1001 derleyici \
+ && useradd -m -u 1001 -g derleyici derleyici \
+ && chmod 700 /home/koco /home/derleyici
 
 COPY nginx.conf        /etc/nginx/nginx.conf
 COPY proxy_common.conf /etc/nginx/proxy_common.conf
@@ -54,9 +67,11 @@ WORKDIR /app
 # setpriv HOME'u DEĞİŞTİRMİYOR. USER koco kullanırken Docker bunu kendisi
 # ayarlıyordu; artık root'tan düştüğümüz için elle vermek şart, yoksa coursier
 # /root/.cache'e yazmaya çalışıp "Permission denied" alıyor ve derleyici ölüyor.
+# derleyici kolu kendi HOME'unu entrypoint.sh'te alıyor.
 ENV HOME=/home/koco
 
 # USER koco YOK: entrypoint root olarak başlayıp volume'ü chown etmeli, sonra
-# setpriv ile uid 1000'e düşüyor. JVM'lerin hiçbiri root çalışmıyor.
+# iki kolu setpriv ile ayrı ayrı düşürüyor: derleyiciler uid 1001, gerisi
+# uid 1000. JVM'lerin hiçbiri root çalışmıyor.
 EXPOSE 7860
 CMD ["/app/entrypoint.sh"]
