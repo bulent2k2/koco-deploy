@@ -41,7 +41,14 @@ primary_region = 'fra'
   # shared-cpu-1x + 2GB yetmedi: (a) yığın sınırlarının toplamı makineyi aşıyordu
   # (1200+512+384 = 2096m > 2048m), (b) tek derleyici örneği eşzamanlı iki
   # kullanıcıyı kaldıramıyordu, (c) soğuk derleme 118 sn sürüyordu.
-  size = 'shared-cpu-2x'
+  #
+  # shared-cpu-2x + 4GB da yetmedi (koco-deploy#17, 7. madde): shared CPU'nun
+  # tabanı vCPU başına %6.25 ve birikmiş bakiye açılışta yalnız 5 sn. Dört
+  # JVM'in açılışı ve uzun bir koşum bakiyeyi bitiriyor, makine tabana
+  # kısılıyor. v74'te ölçüldü: steal %85, derlemeler 20-65 sn, kapının 3/22'si
+  # ask zaman aşımı (30 sn). performance-2x ayrılmış iki çekirdek: kısma yok
+  # ve iki derleyici hâlâ paralel.
+  size = 'performance-2x'
   memory = '4gb'
 
 # KAPASİTE DENETİMİ -- gözcünün kendisi izlensin (koco-deploy#17, 6. madde).
