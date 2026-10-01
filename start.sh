@@ -120,8 +120,8 @@ export COMPILER_INSTANCES
 # (kojojs-core'un bu ayarı tanımayan eski bir sürümünde değişkenin etkisi yok.)
 export SCALAFIDDLE_COMPILER_RECYCLE_AFTER="${SCALAFIDDLE_COMPILER_RECYCLE_AFTER:-0}"
 
-# Coursier önbelleği (/data/coursier) yalnız compilerServer'ın; entrypoint.sh
-# derleyici koluna veriyor ve dizin artık derleyici kullanıcısına ait.
+# Coursier önbelleği yalnız compilerServer'ın: imajda salt okunur
+# (/opt/coursier, koco-deploy#51), entrypoint.sh derleyici koluna veriyor.
 
 mkdir -p /tmp/nginx-client /tmp/nginx-proxy /tmp/nginx-fastcgi /tmp/nginx-uwsgi /tmp/nginx-scgi
 
