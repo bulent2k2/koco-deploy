@@ -69,11 +69,29 @@ declare -a PID BASLANGIC ARDISIK YENIDEN
 # için kaçınılan bash 5.1 bağımlılığını getirmiyor (inceleme notu).
 simdi() { printf '%(%s)T' -1; }
 
+# GC GÜNLÜĞÜ (koco-deploy#59): derleme başına ~2 MB düzleşmeyen RSS büyümesi
+# (#17) GC/metaspace kaynaklı mı, canlıda görmek için. İmaj JRE: jcmd/jstat
+# yok. Okumak: `flyctl ssh console`, sonra /home/derleyici/gc-*.log.
+#  - Dosya adı SÜREÇ değil YUVA başına (gc-1.log, gc-2.log), %p DEĞİL. JVM
+#    açılışta var olan dosyayı döndürüyor (.0/.1/.2; ölçüldü), yani yeniden
+#    başlatılan derleyici öncekinin günlüğünü silmiyor (çöküşten sonra
+#    okunabilir) ve disk yuva başına (3+1)x5 MB'ta kalıyor. %p ile her
+#    yeniden başlatma yeni dosyalar bırakırdı; sınır olmazdı.
+#  - Yer: ev dizini. Derleyicinin kalıcı yazabildiği yer yok (#47, #51); kök
+#    dosya sistemi her makine açılışında imajdan geliyor, günlük o açılış
+#    boyunca yaşıyor.
+#  - COMPILER_OPTS'ta DEĞİL: yuva numarası yalnız burada biliniyor, ve
+#    COMPILER_OPTS Fly'da ezilirse günlük sessizce kaybolmasın. Ayrıca TIRNAKLI
+#    veriliyor: tırnaksız `gc*` CWD'de (derleyicinin yazabildiği ev dizini)
+#    dosya adlarına karşı genişlerdi.
+#  - Editör (Java 8) dışarıda: sözdizimi farklı, asıl şüphe derleyicide.
+
 baslat() {
   local i=$1
   # Her sürece kendi kütüphane önbelleği: aynı dizine
   # iki süreç yazarsa birbirini bozabiliyor.
-  SCALAFIDDLE_LIBCACHE="/tmp/extlibs-$i" nice -n "$NICE" $KOMUT $OPTS &
+  SCALAFIDDLE_LIBCACHE="/tmp/extlibs-$i" nice -n "$NICE" $KOMUT $OPTS \
+    "-J-Xlog:gc*,gc+metaspace=info:file=$HOME/gc-$i.log:time,uptime,level,tags:filecount=3,filesize=5m" &
   PID[$i]=$!
   BASLANGIC[$i]=$(simdi)
   YENIDEN[$i]=0
