@@ -16,8 +16,13 @@
 #  - başka kullanıcıların DERLEME ÇIKTISINI üretmeye devam ediyor; editörle aynı
 #    kökenden (same-origin) tarayıcıya kötü JS verebilir. Kullanıcı ayrımı
 #    bunu kapatamaz.
-#  - /data/coursier'a (volume, kalıcı) yazabiliyor: zehirli bir jar yeniden
-#    başlatmadan ve JVM yenilenmesinden sağ çıkar. Önbellek bütünlüğü ayrı iş.
+#  - kendi ev dizinine ve /tmp'ye yazabiliyor (compilerServer'ın açılmış jar
+#    önbelleği /tmp/extlibs-N, bkz. derleyici-gozcusu.sh). Oraya konan bir şey
+#    aynı açılışta yeniden başlatılan derleyicilere geçer; makine yeniden
+#    başlayınca imajdan gelen temiz kök dosya sistemine döner. Kalıcı
+#    yazabildiği bir yer ARTIK YOK: kütüphane
+#    önbelleği imajda ve salt okunur (koco-deploy#51; eskiden volume'deki
+#    /data/coursier'dı ve zehirli bir jar yeniden başlatmadan sağ çıkardı).
 #
 # NEDEN BURADA: start.sh zaten `koco` olarak koşuyor, kendi çocuklarını başka
 # bir uid'e geçiremez. Kullanıcı değiştirmek root ister ve root yalnız burada.
@@ -30,30 +35,25 @@ export LANG=C.UTF-8 LC_ALL=C.UTF-8
 # Fly volume'leri root'a ait olarak bağlanıyor. İmajda /data yaratmak yetmiyor:
 # bağlama (mount) onu gölgeliyor, yani chown bağlamadan SONRA olmalı.
 #
-# /data koco'nun (H2 veritabanı); /data/coursier derleyicinin (kütüphane
-# önbelleği; onu yalnız compilerServer kullanıyor). /data 711: derleyici
-# içinden geçip coursier'a ulaşabiliyor ama dizini LİSTELEYEMİYOR. Geçmek
-# dosya adını bilene okuma izni vermesin diye koco'nun dosyaları da go-rwx
-# (eski imajlar 644 bırakmıştı; yenileri start.sh'in umask 077'si ile doğuyor).
-mkdir -p /data /data/coursier
+# /data YALNIZ koco'nun (H2 veritabanı), 700: derleyici içine giremiyor.
+# Kütüphane önbelleği artık imajda (/opt/coursier, koco-deploy#51).
+#
+# Eski imajların /data/coursier'ı (önce koco'nun, #47'den sonra derleyicinin):
+# derleyicinin yazabildiği her şey güvenilmez, o yüzden sahiplik değiştirmek
+# yerine SİLİNİYOR. `rm -rf` sembolik bağları izlemiyor; sabit bağın yalnız
+# bu adını siliyor, işaret ettiği dosyaya dokunmuyor. Derleyici henüz
+# başlamadı, yani silerken yarışacak kimse yok. /data 700 olduğundan derleyici
+# onu yeniden yaratamaz: pratikte bir kez çalışır.
+rm -rf /data/coursier
+mkdir -p /data
 chown koco:koco /data
-chmod 711 /data
-find /data -mindepth 1 -maxdepth 1 ! -name coursier -exec chown -R koco:koco {} + -exec chmod -R go-rwx {} +
-# /data/coursier GÜVENİLMEYEN kullanıcının yazabildiği bir dizin: root orada
-# her açılışta özyinelemeli iş YAPMAMALI. Yapsaydı, derleme yolundan açılmış
-# bir sabit bağ (`ln /data/koco.mv.db /data/coursier/x`; protected_hardlinks=0
-# ise okuyamadığı dosyaya da açılabiliyor) bir sonraki açılışta `chown -R`
-# ile veritabanını derleyiciye geçirirdi: veritabanı ona açılır, editöre
-# kapanırdı. Bu yüzden sahiplik göçü (eski imajların koco'ya ait önbelleği)
-# YALNIZ BİR KEZ, dizin henüz derleyicinin değilken; sonrasında derleyicinin
-# yarattığı her şey zaten onun. `chmod` özyinelemesiz, yalnız dizinin kendisi.
-if [ "$(stat -c %u /data/coursier)" != 1001 ]; then
-  chown -R derleyici:derleyici /data/coursier
-fi
-chmod 700 /data/coursier
-# Ek sigorta: sahibi olmadığı dosyaya sabit bağ açmayı çekirdek düzeyinde
-# kapat. systemd bunu 1 yapıyor ama Fly'ın init'i systemd değil; yazılamazsa
-# (izin yok, salt okunur /proc) zararsız, yukarıdaki kural yine koruyor.
+chmod 700 /data
+# Eski imajlar 644 bırakmıştı; yenileri start.sh'in umask 077'si ile doğuyor.
+find /data -mindepth 1 -maxdepth 1 -exec chown -R koco:koco {} + -exec chmod -R go-rwx {} +
+# Sigorta: sahibi olmadığı dosyaya sabit bağ açmayı çekirdek düzeyinde kapat
+# (derleyici /tmp gibi ortak bir yerde koco'nun bir dosyasına bağ açıp onu
+# kendine kalıcılaştıramasın). systemd bunu 1 yapıyor ama Fly'ın init'i
+# systemd değil; yazılamazsa (izin yok, salt okunur /proc) zararsız.
 sysctl -qw fs.protected_hardlinks=1 2>/dev/null || true
 
 # nginx access_log /dev/stdout'a yazıyor; o boru root'a ait ve uid düştükten
@@ -105,9 +105,20 @@ export COMPILER_OPTS="${COMPILER_OPTS:--J-Xmx1100m -J-Xss4m}"
   done
   export HOME=/home/derleyici
   export SCALAFIDDLE_ROUTER_URL="ws://localhost:8880/compiler"
-  # Kalıcı disk: yoksa her yeniden başlatmada jar'lar yeniden indirilir ve ilk
-  # derleme 30-60 sn gecikir. Yalnız compilerServer kullanıyor.
-  export COURSIER_CACHE=/data/coursier
+  # Kütüphane önbelleği imajda, root'a ait ve salt okunur (koco-deploy#51;
+  # build.sh dolduruyor). ÇEVRİMDIŞI: eksik bir jar indirilmeye çalışılmaz,
+  # derleyici "not found" ile Ready olamaz; /saglik?enAz=N bunu kojojs-core#56
+  # ile görüyor (öncesinde düşen derleyicinin bağlantısı kayıtlı kalıyordu) -- sessizce
+  # internetten çekip yazılamayan önbellekte kilit hatasıyla düşmekten iyi.
+  # (Çevrimiçi kipte coursier salt okunur önbellekte .structure.lock
+  # yaratamayıp düşüyor; ölçüldü.)
+  export COURSIER_CACHE=/opt/coursier
+  export COURSIER_MODE=offline
+  # LibraryManager önce ivy2Local'a (~/.ivy2/local) bakıyor ve bu dosya deposu
+  # ÇEVRİMDIŞI kipte de okunuyor. ~ derleyicinin yazabildiği ev dizini: oraya
+  # konan bir jar imajdakinin önüne geçerdi. Yok olan ve yaratılamayan bir
+  # yola çevir (/ root'un).
+  export JAVA_OPTS="-Divy.home=/nonexistent"
   cd /home/derleyici
   # --no-new-privs: derleme yolundan çalışan kod imajdaki setuid ikililerle
   # (su, passwd, mount...) yetki kazanamasın. Çocuklara miras kalıyor, yani
