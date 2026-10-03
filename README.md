@@ -33,6 +33,10 @@ Tek konteynerde üç JVM servisi ve önlerinde nginx:
 nginx yol ayrımı: `/compile`, `/complete`, `/embed`, `/codeframe`,
 `/compileResult`, `/cevir`, `/cache/*` → router; kalan her şey → editör.
 
+`/cevir` gövdesi 64 KB ile sınırlı ve tüm istemciler için birlikte saniyede 10 istekle
+(20'lik ani artışla) hız sınırlı; aşan istek 429 alır. Sınır istemci başına değil
+sabit anahtarlı: HF vekilinin arkasında istemci adresi güvenilir değil.
+
 Tarayıcı hem editöre hem router'a konuşuyor. nginx ikisini **aynı origin**
 altında birleştirdiği için yapılandırma çok basitleşiyor.
 
