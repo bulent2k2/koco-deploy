@@ -52,6 +52,11 @@ COPY stage/editor   /app/editor
 COPY stage/ornekler /app/ornekler
 # Ses/görüntü dosyaları (kojojs-dev/medya); nginx /media/ yolunu buraya bağlar
 COPY stage/medya    /app/medya
+# compilerServer'ın kütüphane önbelleği (koco-deploy#51): build.sh dolduruyor,
+# derleyici çevrimdışı okuyor (entrypoint.sh). /app'in DIŞINDA, çünkü aşağıdaki
+# `chown -R koco /app` onu koco'ya geçirirdi; burada root'a ait kalıyor ve
+# derleyici de koco da yalnız okuyabiliyor. Kipler build.sh'ten (a+rX, go-w).
+COPY stage/coursier /opt/coursier
 
 RUN chmod +x /app/start.sh /app/derleyici-gozcusu.sh /app/router/bin/* /app/compiler/bin/* /app/editor/bin/* \
  && mkdir -p /var/lib/nginx /var/log/nginx /app/logs \
@@ -65,8 +70,8 @@ RUN chmod +x /app/start.sh /app/derleyici-gozcusu.sh /app/router/bin/* /app/comp
 WORKDIR /app
 
 # setpriv HOME'u DEĞİŞTİRMİYOR. USER koco kullanırken Docker bunu kendisi
-# ayarlıyordu; artık root'tan düştüğümüz için elle vermek şart, yoksa coursier
-# /root/.cache'e yazmaya çalışıp "Permission denied" alıyor ve derleyici ölüyor.
+# ayarlıyordu; artık root'tan düştüğümüz için elle vermek şart, yoksa HOME
+# /root kalır ve oraya yazmak isteyen her şey "Permission denied" alır.
 # derleyici kolu kendi HOME'unu entrypoint.sh'te alıyor.
 ENV HOME=/home/koco
 

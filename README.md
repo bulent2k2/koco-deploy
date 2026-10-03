@@ -68,6 +68,15 @@ Kaynaktan Docker içinde derleyemiyoruz: `kojojs-editor` hâlâ sbt 0.13 ve
 bakıyor (`kojojs-core` Faz 3'te sbt 1'e geçti ve Maven Central'dan çözülüyor) —
 paketleme sıcak bir `~/.ivy2` ile yerelde yapılmalı.
 
+`build.sh`'ın son adımı compilerServer'ın kütüphane önbelleğini
+(`stage/coursier`) doldurur: sahnelenmiş router ile bir compilerServer'ı kısa
+bir süre birlikte açar, derleyici kütüphaneleri üretimdeki yoldan çekip Ready
+olunca kapatır. Bu adım **Maven Central'a erişim** ister. Önbellek imaja
+root'a ait ve salt okunur girer; derleyici onu çevrimdışı okur, çalışma anında
+hiçbir şey indirmez ve volume'e yazmaz (koco-deploy#51). Editörün
+`libraries.json`'una kütüphane eklenirse `build.sh` durur: o listeyi
+önbelleğe alma yolu henüz yok.
+
 `build.sh` paketlemeden önce kaynak klonlarını denetler: `kojojs-core` ve
 `kojojs-editor` `master` dalında, temiz ve `origin`'in gerisinde değilse devam
 eder; `KOCO_TOOLCHAIN=tr` için scala-tr jar'larının geldiği klon (yan yana

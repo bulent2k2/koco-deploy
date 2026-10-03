@@ -302,6 +302,86 @@ else
   echo "*** stok derleyici bırakıldı (KOCO_TOOLCHAIN=$KOCO_TOOLCHAIN)"
 fi
 
+# --- Derleyicinin kütüphane önbelleği (koco-deploy#51) ---
+# Derleyici dış kütüphaneleri (router'ın defaultLibs'i + editörün
+# libraries.json'u) coursier ile çekiyor. Eskiden çalışma anında, derleyicinin
+# YAZABİLDİĞİ kalıcı /data/coursier'a çekiyordu: oraya konan zehirli bir jar
+# yeniden başlatmadan sağ çıkardı (#47'nin açık bıraktığı). Artık önbellek
+# burada, imaj kurulurken dolduruluyor ve imaja root'a ait, salt okunur
+# giriyor; derleyici onu çevrimdışı okuyor (entrypoint.sh: COURSIER_MODE).
+#
+# NASIL: üretimdeki yolun AYNISI koşuyor. Sahnelenmiş router ve compilerServer
+# kısa bir süre birlikte açılıyor, router kütüphane listesini derleyiciye
+# yolluyor, derleyici kendi Fetch'iyle çekip Ready oluyor. Liste ve coursier
+# koordinatları için ikinci bir kaynak yok, yani kayma da yok. Derleyici Ready
+# olduysa önbellek, aynı listeyle çevrimdışı açılış için tam demektir.
+#
+# Editörün listesi router'a normalde editörün /libraries/2.13 ucundan geliyor;
+# burada editör koşmuyor, o yarı dosyadan veriliyor. Bugün liste BOŞ. Doluysa
+# burada dur: o yarıyı da dosyaya yazmak gerekecek (Librarian'ın biçimiyle).
+echo "*** derleyici kütüphane önbelleği dolduruluyor (stage/coursier)"
+if grep -q '"artifact"' "$IKOCO/kojojs-editor/server/src/main/resources/libraries.json"; then
+  echo "hata: kojojs-editor libraries.json'da kütüphane var; build.sh onları" >&2
+  echo "      önbelleğe almıyor ve çevrimdışı derleyici onları bulamaz (#51)." >&2
+  exit 1
+fi
+ONB=$(mktemp -d)
+echo '[]' > "$ONB/editor-kutuphaneleri.json"
+ONB_PORT=${KOCO_ONBELLEK_PORT:-18880}
+ONB_ANAHTAR=$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
+mkdir -p "$HERE/stage/coursier"
+onbellek_durdur() {
+  [ -n "${ONB_DERLEYICI:-}" ] && kill "$ONB_DERLEYICI" 2>/dev/null
+  [ -n "${ONB_ROUTER:-}" ] && kill "$ONB_ROUTER" 2>/dev/null
+  wait 2>/dev/null
+  ONB_DERLEYICI=; ONB_ROUTER=
+}
+trap onbellek_durdur EXIT
+# CWD geçici dizin: router ./logs ve önbellek dizinini oraya yazıyor.
+(cd "$ONB" && exec env LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+   SCALAFIDDLE_PORT="$ONB_PORT" SCALAFIDDLE_SECRET="$ONB_ANAHTAR" \
+   SCALAFIDDLE_CACHE_DIR="$ONB/router-onbellegi" \
+   SCALAFIDDLE_LIBRARIES_URL="{\"2.13\": \"file:$ONB/editor-kutuphaneleri.json\"}" \
+   JAVA_HOME="${KOCO_JDK_CORE:-${JAVA_HOME:-}}" \
+   "$HERE/stage/router/bin/scalafiddle-router") > "$ONB/router.log" 2>&1 &
+ONB_ROUTER=$!
+n=0
+until curl -s -o /dev/null "http://localhost:$ONB_PORT/saglik"; do
+  n=$((n + 1)); [ "$n" -lt 120 ] || { echo "hata: router açılmadı ($ONB/router.log)" >&2; exit 1; }
+  sleep 1
+done
+# ivy.home geçici dizine: geliştiricinin ~/.ivy2/local'ı önbelleğe sızmasın;
+# imaja yalnız Maven Central'dan gelen girsin.
+(cd "$ONB" && exec env LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+   SCALAFIDDLE_SECRET="$ONB_ANAHTAR" \
+   SCALAFIDDLE_ROUTER_URL="ws://localhost:$ONB_PORT/compiler" \
+   SCALAFIDDLE_LIBCACHE="$ONB/extlibs" \
+   COURSIER_CACHE="$HERE/stage/coursier" \
+   JAVA_OPTS="-Divy.home=$ONB/ivy" \
+   JAVA_HOME="${KOCO_JDK_CORE:-${JAVA_HOME:-}}" \
+   "$HERE/stage/compiler/bin/scalafiddle-core") > "$ONB/derleyici.log" 2>&1 &
+ONB_DERLEYICI=$!
+n=0
+until curl -s "http://localhost:$ONB_PORT/durum?secret=$ONB_ANAHTAR" | grep -q '"ready":1'; do
+  n=$((n + 1))
+  if [ "$n" -ge 300 ]; then
+    echo "hata: derleyici 300 sn'de Ready olmadı; günlük: $ONB/derleyici.log" >&2
+    grep -E 'ERROR|not found|download error' "$ONB/derleyici.log" | tail -5 >&2
+    exit 1
+  fi
+  sleep 1
+done
+onbellek_durdur
+trap - EXIT
+# Kilit dosyaları imaja girmesin; içerik yalnız jar/pom ve coursier'ın
+# doğrulama işaretleri.
+find "$HERE/stage/coursier" -name '*.lock' -delete
+# COPY kipleri olduğu gibi taşıyor: geliştiricinin umask'ı 077 ise derleyici
+# (uid 1001) imajda okuyamaz. Herkese okunur, kimseye (root dışı) yazılmaz.
+chmod -R u=rwX,go=rX "$HERE/stage/coursier"
+echo "    ${n} sn; $(find "$HERE/stage/coursier" -name '*.jar' | wc -l | tr -d ' ') jar, $(du -sh "$HERE/stage/coursier" | cut -f1)"
+rm -rf "$ONB"
+
 echo "*** hazır:"
 du -sh "$HERE/stage"/*
 echo
