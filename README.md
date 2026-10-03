@@ -31,7 +31,7 @@ Tek konteynerde üç JVM servisi ve önlerinde nginx:
 | nginx | **7860** | tek genel port |
 
 nginx yol ayrımı: `/compile`, `/complete`, `/embed`, `/codeframe`,
-`/compileResult`, `/cache/*` → router; kalan her şey → editör.
+`/compileResult`, `/cevir`, `/cache/*` → router; kalan her şey → editör.
 
 Tarayıcı hem editöre hem router'a konuşuyor. nginx ikisini **aynı origin**
 altında birleştirdiği için yapılandırma çok basitleşiyor.
