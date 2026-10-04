@@ -1,0 +1,24 @@
+# once_dene/dene.sh editör yolu sonucu -- 2026-10-04 -- http://127.0.0.1:7880 -- core 8e86dcf, dev 56a4ddf, editor 971519c
+# geçti: 21   kaldı: 0   eksik: 0
+sınama	durum	ayrıntı
+editör-sayfası-açılıyor	geçti	HTTP 200, compilerURL=http://127.0.0.1:7880
+derleyici-adresi-aynı-köken	geçti	http://127.0.0.1:7880
+resultframe-açılıyor	geçti	HTTP 200
+resultframe-sandbox-başlığı	geçti	2 CSP başlığı: sandbox allow-scripts allow-popups allow-modals | sandbox allow-scripts allow-popups allow-modals
+resultframe-opak-köken	geçti	window.origin=null
+resultframe-betik-koşuyor	geçti	betik etiketi çalıştı
+resultframe-varlıklar-opak-kökenden	geçti	/assets/javascript/pixi.min.js ok/cors, /media/collidium/hit.mp3 ok/cors
+resultframe-pixi-yükleniyor	geçti	PIXI 5.3.12
+ilk-koşu-kod-dalı	geçti	frame-code
+ilk-koşu-allow-özniteliği	geçti	allow="autoplay; fullscreen"
+ilk-koşu-sandbox-özniteliği	geçti	sandbox="allow-scripts allow-popups allow-modals"
+ilk-koşu-autoplay-izni	geçti	allowsFeature("autoplay")=true
+ilk-koşu-tek-belge-isteği	geçti	/resultframe belge isteği=1
+ikinci-koşu-autoplay-izni	geçti	allowsFeature("autoplay")=true
+ikinci-koşu-tek-ek-istek	geçti	ek belge isteği=1
+editör-sayfa-hatası-yok	geçti	yok
+api-başlıksız-reddediliyor	geçti	HTTP 403
+api-yanlış-değer-reddediliyor	geçti	HTTP 403 (X-Requested-With: XMLHttpRequest)
+api-doğru-başlık-kapıdan-geçiyor	geçti	HTTP 500 (kapı geçildi; yanıtın kendisi ölçülmüyor)
+api-opak-köken-reddediliyor	geçti	HTTP 403 (Origin: null)
+api-cors-ön-uçuşu-yok	geçti	HTTP 404, Access-Control-Allow-Origin=(yok)
