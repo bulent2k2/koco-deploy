@@ -190,7 +190,7 @@ async function main() {
       }
 
       if (!kodDali) {
-        KOSU.slice(1, 7).forEach(a => eksik(a, 'ilk-koşu-kod-dalı tutmadı'));
+        KOSU.slice(1).forEach(a => eksik(a, 'ilk-koşu-kod-dalı tutmadı'));   // 0. eleman kod-dalı'nın kendisi
       } else {
         await dene('ilk-koşu-allow-özniteliği', async () => {
           const a = await oznitelik('allow');
