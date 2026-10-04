@@ -20,17 +20,23 @@ KOCO="${KOCO:-http://127.0.0.1:7860}"
 N="${1:-8}"; HIZ="${2:-8}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-case "$KOCO" in
-  http://localhost:*|http://127.0.0.1:*) ;;
-  *) [ -n "${KOCO_SEL_IZNI:-}" ] || { echo "reddedildi: $KOCO yerel değil (canlıya sel için KOCO_SEL_IZNI=1)" >&2; exit 2; } ;;
-esac
+# Konak AYRIŞTIRILARAK denetlenir; kalıp eşleştirmek yetmez: http://127.0.0.1:1@baska.example kalıba
+# uyar ama curl'ün gittiği konak baska.example'dır (userinfo). Userinfo içeren adres hiç kabul edilmez.
+yerel=$(python3 -c '
+import sys, urllib.parse as u
+p = u.urlparse(sys.argv[1])
+ok = p.scheme in ("http", "https") and "@" not in p.netloc and p.hostname in ("localhost", "127.0.0.1", "::1")
+print("1" if ok else "")' "$KOCO")
+[ -n "$yerel" ] || [ -n "${KOCO_SEL_IZNI:-}" ] || { echo "reddedildi: $KOCO yerel değil (canlıya sel için KOCO_SEL_IZNI=1)" >&2; exit 2; }
 
 # Sarmalayıcı dene.sh'tekiyle AYNI olmalı: üçüncü bir kopya tutmak yerine oradan çekiliyor
 eval "$(sed -n '/^sar() {/,/^}/p' "$DIR/dene.sh")"
 type sar >/dev/null 2>&1 || { echo "dene.sh'ten sar() çıkarılamadı" >&2; exit 2; }
 
 GOVDE=$(mktemp); KAYNAK=$(mktemp); SEL=""
-trap '[ -n "$SEL" ] && kill $SEL 2>/dev/null; pkill -P $$ curl 2>/dev/null; rm -f "$GOVDE" "$KAYNAK"' EXIT
+# Selin curl'leri alt kabuğun ($SEL) çocuğu, $$'ın değil: önce çocukları, sonra alt kabuğu öldür
+seli_durdur() { [ -n "$SEL" ] || return 0; pkill -P "$SEL" 2>/dev/null; kill "$SEL" 2>/dev/null; wait "$SEL" 2>/dev/null; SEL=""; }
+trap 'seli_durdur; rm -f "$GOVDE" "$KAYNAK"' EXIT
 python3 -c "import sys; sys.stdout.write('ileri(10)\n' * 6000)" > "$GOVDE"   # 60 000 bayt (sınır 65 536)
 
 derle() {  # benzersiz kaynak, "HTTP süre" yazar
@@ -58,7 +64,7 @@ evre "$A"
 ) &
 SEL=$!
 evre "$B"
-kill "$SEL" 2>/dev/null; wait "$SEL" 2>/dev/null; SEL=""
+seli_durdur
 # Sel kesilince router kuyruğundaki çeviri isteklerini hâlâ işliyor olabilir; hemen ölçmek "sel sonrası"nı
 # şişirir (ilk sürümde 0.8 yerine 2.3 sn çıktı). Küçük bir /cevir isteği hızlanana kadar bekle, süreyi yaz.
 t0=$SECONDS; hizli=0
