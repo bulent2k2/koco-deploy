@@ -14,9 +14,11 @@ once_dene/
   tarayici/sahne.html     editörün resultframe.scala.html'inin başsız eşi (aynı öğe kimlikleri)
   tarayici/cizdir.js      Playwright koşucusu: hata, çıktı, PIXI sürümü, çizim/kare sayıları
   tarayici/ornekle.js     tek betiği koşarken PIXI'nin iç durumunu ZAMAN İÇİNDE örnekler (aşağıya bak)
+  tarayici/editor.js      GERÇEK editör sayfasını, /resultframe'i ve /api kapısını sınar (`-e`; aşağıya bak)
   tarayici/package.json   playwright bağımlılığı (npm install; npx playwright install chromium)
   sonuclar/derleme.tsv    son derleme sonucu (betik, durum, özet)
   sonuclar/calisma.tsv    son tarayıcı sonucu (durum, süre, pixi, çizim, kare, çocuk, doku, hata, uyarı, çıktı)
+  sonuclar/editor.tsv     son editör yolu sonucu (sınama, durum, ayrıntı); yalnız `-e -g` ile
   sonuclar/gorseller/     betik başına tuval görüntüsü -- yerelde üretilir, git'e girmez (her koşuda değişirdi)
 ```
 
@@ -27,10 +29,26 @@ once_dene/
 KOCO=http://localhost:7860 ./dene.sh -t      # yerel konteyner: derleme + tarayıcı
 ./dene.sh -t -g                              # sonuçları sonuclar/ altına yaz (TSV + görüntüler)
 ./dene.sh -t betikler/05-gradyanlar.kojo     # tek betik
+./dene.sh -t -e                              # + editör yolu sınaması (kapının görmediği yerler)
 ./dene.sh -h                                 # seçenekler (-s saniye, -k kitaplık dizini)
 ```
 
 Tarayıcı koşusu için bir kez: `cd tarayici && npm install && npx playwright install chromium`.
+
+**Node 20 ya da üstü şart.** Playwright daha eski bir Node'da yüklenmez (`You are running Node.js
+16.16.0. Playwright requires Node.js 20 or higher.`). Önce `node -v` bakın. Varsayılan `node`
+eskiyse (bu makinede `/usr/local/bin/node` v16.16.0'dı) Homebrew'daki yenisini o komut için öne alın:
+
+```sh
+PATH=/usr/local/opt/node@26/bin:$PATH KOCO=http://localhost:7860 ./dene.sh -t -g
+# ya da bu kabuk oturumu boyunca:  export PATH=/usr/local/opt/node@26/bin:$PATH
+```
+
+Kurulum da aynı Node ile yapılmalı: `npx playwright install chromium` eski Node'da yukarıdaki iletiyle
+durur. Chromium macOS'ta `~/Library/Caches/ms-playwright` altına iner. (Eski `dene.sh` bu durumu
+"playwright bulunamadı" diye gösteriyordu: paket kurulu olsa bile `require` Node sürümünden patlıyor,
+ve ileti yanlış yöne çekiyordu. Şimdi Node sürümünü de yazıyor.)
+
 Kitaplıklar (`pixi.min.js`, `jsts.min.js`, `howler.min.js`) ve kaplumbağa simgesi ilk koşuda
 `$KOCO/assets/...` adresinden `tarayici/kitaplik/` ve `tarayici/assets/` altına indirilir
 (git'e girmez); böylece tarayıcı **canlının sunduğu** PIXI sürümüyle koşar. Yerel bir
@@ -142,6 +160,8 @@ değişken adları ASCII.
 | çalışma | geçti | sayfa hatası yok **ve** betik `TAMAM` yazdı |
 | çalışma | kaldı | sayfa hatası: fırlayan kural dışı durum, `gerekli(...)` tutmadı, yakalanmamış söz (Promise); ya da çıktıda `HATA:` satırı |
 | çalışma | eksik | hata yok ama `-s` süresinde (varsayılan 20 s) `TAMAM` yazılmadı: betik takıldı ya da beklenen kare sayısına gelmedi |
+| editör | geçti / kaldı | sınama tuttu / tutmadı (ayrıntı `sonuclar/editor.tsv`'de ya da ekranda `✗` satırında) |
+| editör | eksik | bir **önkoşul** tutmadığı için ölçülemedi. Başarısızlık sayılır: ölçülmeyen şey geçmiş sayılmaz |
 
 Betikler kendini denetler: `gerekli(koşul, ileti)` tutmazsa fırlayan hata sayfa hatası olur.
 Her betik sonunda `satıryaz("TAMAM: ...")` yazar; canlandırmalı olanlar belli bir kare sayısında
@@ -152,6 +172,53 @@ geçer, `-s` yalnız üst sınırdır; geçen süre `süre` sütununa yazılır.
 
 Ağ/medya yüklenememesi (dosya:// koşusunda `/media/...` yok) **uyarı** sayılır, kaldı değil;
 `sonuclar/calisma.tsv` uyarılar sütununda görünür.
+
+## Editör yolu sınaması (`-e`)
+
+Kapı derlenmiş betiği **kendi `sahne.html`'inde** koşturur; yani editör sayfasını, `/resultframe`'in
+sunucu başlıklarını ve `/api` kapısını hiç görmez; bu üç yerdeki bir gerileme 22/22'yi bozmaz.
+Somut örnek kojojs-editor#51 (ilk "Çalıştır"da ses yok): v80 ve v81'in iki "düzeltmesi" kapıyı 22/22 ile
+geçip canlıya çıktı, belirti sürdü ve ancak elle ölçülünce görüldü. Öbür ikisi aynı kör noktada:
+#45 (çocuğun kodu editörle aynı kökende koşuyordu) ve #47 (`/api`'ye başka bir sitenin formu
+ulaşabiliyordu). `-e` bunları `tarayici/editor.js` ile gerçek editör sayfasında, gerçek sunucu
+başlıklarıyla sınar. Node 20+ gerekir (yukarı bak).
+
+```sh
+KOCO=http://127.0.0.1:7860 ./dene.sh -t -e -g          # kapı + editör yolu, sonuçları yaz
+KOCO=https://ikojo.fly.dev ./dene.sh -e betikler/05-gradyanlar.kojo   # editör yolu (+ yalnız bir derleme)
+node tarayici/editor.js http://127.0.0.1:7860           # yalnız sınamalar (~15 sn, derleyici sıcaksa); stdout'a TSV satırları
+```
+
+| grup | sınamalar | neyi korur |
+|---|---|---|
+| önkoşul | `editör-sayfası-açılıyor`, `derleyici-adresi-aynı-köken` | sayfa kendi derleyicisini sınanan adreste arıyor (aşağıdaki tuzak) |
+| `/resultframe` (#45) | `-sandbox-başlığı`, `-opak-köken`, `-betik-koşuyor`, `-varlıklar-opak-kökenden`, `-pixi-yükleniyor` | kod editörün kökeninde koşmaz (`window.origin === "null"`), ama varlıkları CORS ile yükleyebilir |
+| ilk ve ikinci koşu (#51) | `ilk-koşu-kod-dalı`, `-allow-özniteliği`, `-sandbox-özniteliği`, `-autoplay-izni`, `-tek-belge-isteği`, `ikinci-koşu-autoplay-izni`, `-tek-ek-istek`, `editör-sayfa-hatası-yok` | taze sayfada İLK "Çalıştır"da çerçevede `allowsFeature("autoplay") == true` ve `/resultframe`'e TEK belge isteği |
+| `/api` (#47) | `api-başlıksız-…`, `-yanlış-değer-…`, `-opak-köken-reddediliyor`, `-doğru-başlık-kapıdan-geçiyor`, `-cors-ön-uçuşu-yok` | `X-Requested-With: koco` şart, `Origin: null` olamaz, CORS'a açık değil |
+
+`api-doğru-başlık-kapıdan-geçiyor` yalnız 403 **olmadığını** ölçer (yol uydurma, gövde boş; kapıyı
+geçince 500 de dönebilir). API'nin kendi sağlığı hakkında bir şey söylemez.
+
+**Tuzak: yerel konteynerde adres.** Sayfa derleyici adresini `PUBLIC_URL`'den (yoksa
+`http://localhost:7860`) gömer. Başka bir adresten açarsanız ("Çalıştır") derleme isteği boş yere gider
+ve `Sunucuya ulaşılamadı` der. `localhost` ile `127.0.0.1` ayrı kökenlerdir. Sınama bunu
+`derleyici-adresi-aynı-köken` ile yakalar (sekiz koşu sınaması `eksik` kalır, 120 sn takılmaz):
+
+```sh
+docker run -d -p 7870:7860 -e PUBLIC_URL=http://127.0.0.1:7870 -e SCALAFIDDLE_SECRET=yerel koco
+KOCO=http://127.0.0.1:7870 ./dene.sh -t -e
+```
+
+**Nasıl doğrulandı, sınırı ne.** Canlıya (v82) karşı 21/21. Sandbox ve `/api` kapısından ÖNCEki bir
+imajla (editor `265f54c`) 7 sınama kırmızı: sandbox başlığı, opak köken, `allow`, `sandbox`
+özniteliği (`allow-same-origin` var) ve `/api`'nin üç reddi. Ama:
+
+- Autoplay sınamaları o eski imajda **geçer**: aynı kökenli çerçevede autoplay zaten varsayılan olarak
+  açık, #51 yalnız opak kökenli çerçevede çıkar. Kırmızıya döndüğü ayrıca gösterildi: istemci JS'inden
+  `autoplay` çıkarılınca (Playwright `route` ile, sunucuya dokunmadan) `-allow-özniteliği` ve iki
+  `-autoplay-izni` kırmızı oldu.
+- `-tek-belge-isteği` ve `-tek-ek-istek` sayaçlarının kırmızısı **gösterilemedi**: #52'nin iki istek
+  davranışını üreten bir imaj elinde yoktu; sayaç yalnız geçen tarafta (değer 1) doğrulandı.
 
 ## Betikler ve kapsadıkları
 
