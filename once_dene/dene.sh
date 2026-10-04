@@ -7,9 +7,13 @@
 #   KOCO=http://localhost:7860 ./dene.sh -t     # yerel konteyner, derleme + tarayıcı
 #   ./dene.sh -t -g                # sonuçları sonuclar/{derleme,calisma}.tsv'ye yaz
 #   ./dene.sh -t betikler/05-gradyanlar.kojo    # tek betik
+#   KOCO=http://127.0.0.1:7860 ./dene.sh -t -e  # + editör yolu sınaması (kapının görmediği yerler)
 #
 # Seçenekler
 #   -t          tarayıcıda da çalıştır (node + playwright gerekir; bkz. tarayici/package.json)
+#   -e          GERÇEK editör sayfasını, /resultframe'i ve /api kapısını da sına (tarayici/editor.js; node +
+#               playwright gerekir). Kapı bunları görmez: derlenmiş betiği kendi sahne.html'inde koşturur.
+#               Yerel konteyner PUBLIC_URL ile, sınanan adresle AYNI adreste başlatılmış olmalı (bkz. README)
 #   -g          sonuçları sonuclar/ altına yaz (TSV + ekran görüntüleri); yoksa yalnız ekrana
 #   -s SANİYE   tarayıcıda betik başına EN ÇOK bekleme (varsayılan 20); TAMAM/HATA görünür görünmez geçilir
 #   -k DİZİN    tarayıcı kitaplıkları (pixi/jsts/howler .min.js); varsayılan: $KOCO/assets/javascript/
@@ -20,7 +24,7 @@
 #   derleme : geçti / kaldı (derleyici hata verdi) / sunucu (HTTP 200 gelmedi -- sunucunun sorunu)
 #   çalışma : geçti / kaldı (sayfa hatası; gerekli(...) tutmayınca da bu; çıktıda "HATA:") / eksik (sürede "TAMAM" yazılmadı)
 #
-# Çıkış kodu: herhangi bir "kaldı" ya da "eksik" varsa 1 (sunucu 2), yoksa 0.
+# Çıkış kodu: herhangi bir "kaldı" ya da "eksik" varsa (editör sınamasında da) 1 (sunucu 2), yoksa 0.
 #
 # Taşınabilirlik: macOS /bin/bash 3.2 -- ilişkisel dizi yok; kabuk değişken adları ASCII.
 # Sarmalayıcı (sar) kojojs-editor application.conf defaultSource ile AYNI olmalı
@@ -30,14 +34,15 @@ KOCO="${KOCO:-https://ikojo.fly.dev}"
 KOCO_NOT="${KOCO_NOT:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-TARAYICI=""; GUNCELLE=""; SANIYE=20; KITAPLIK=""
-while getopts "tgs:k:h" opt; do
+TARAYICI=""; GUNCELLE=""; SANIYE=20; KITAPLIK=""; EDITOR_SINAMA=""
+while getopts "tgs:k:eh" opt; do
   case $opt in
     t) TARAYICI=1 ;;
     g) GUNCELLE=1 ;;
     s) SANIYE="$OPTARG" ;;
     k) KITAPLIK="$OPTARG" ;;
-    h|*) sed -n '2,26p' "$0"; exit 0 ;;
+    e) EDITOR_SINAMA=1 ;;
+    h|*) sed -n '2,30p' "$0"; exit 0 ;;
   esac
 done
 shift $((OPTIND-1))
@@ -108,15 +113,15 @@ kitaplik_hazirla() {
   echo "  tarayıcı kitaplığı: PIXI $surum"
 }
 
-if [ -n "$TARAYICI" ]; then
+if [ -n "$TARAYICI" ] || [ -n "$EDITOR_SINAMA" ]; then
   command -v node >/dev/null || { echo "node yok; -t için Node.js ve Playwright gerekir (tarayici/package.json)" >&2; exit 2; }
   if [ -d "$DIR/tarayici/node_modules/playwright" ]; then export NODE_PATH="$DIR/tarayici/node_modules${NODE_PATH:+:$NODE_PATH}"; fi
   node -e "require('playwright')" 2>/dev/null || { echo "playwright yüklenemedi (node $(node -v)). Playwright Node 20+ ister; kurulu değilse: cd tarayici && npm install && npx playwright install chromium (bkz. README, Kullanım: \"Node 20 ya da üstü şart\")" >&2; exit 2; }
-  kitaplik_hazirla
+  [ -n "$TARAYICI" ] && kitaplik_hazirla
 fi
 
-cikti=$(mktemp); ann_dosya=$(mktemp); d_sonuc=$(mktemp); c_sonuc=$(mktemp)
-trap 'rm -f "$cikti" "$ann_dosya" "$d_sonuc" "$c_sonuc"' EXIT
+cikti=$(mktemp); ann_dosya=$(mktemp); d_sonuc=$(mktemp); c_sonuc=$(mktemp); e_sonuc=$(mktemp)
+trap 'rm -f "$cikti" "$ann_dosya" "$d_sonuc" "$c_sonuc" "$e_sonuc"' EXIT
 
 # Isınma: derleyici kayıt olmadan gelen ilk istekler 5xx döner
 isin() {
@@ -189,9 +194,29 @@ print('\t'.join(str(x) for x in [d.get('durum','kaldı'), d.get('sure',''), d.ge
   fi
 done
 
+e_gecti=0; e_kaldi=0; e_eksik=0
+if [ -n "$EDITOR_SINAMA" ]; then
+  echo
+  echo "Editör yolu (gerçek editör sayfası, /resultframe, /api kapısı): $KOCO"
+  node "$DIR/tarayici/editor.js" "$KOCO" > "$e_sonuc"
+  if [ ! -s "$e_sonuc" ]; then
+    e_kaldi=$((e_kaldi+1)); echo "✗ editor.js -- çıktı vermedi (çöktü)"
+    printf 'editor.js\tkaldı\tçıktı vermedi\n' >> "$e_sonuc"
+  else
+    while IFS=$'\t' read -r e_ad e_durum e_ayrinti; do
+      case "$e_durum" in
+        geçti) e_gecti=$((e_gecti+1)); echo "✓ $e_ad" ;;
+        eksik) e_eksik=$((e_eksik+1)); echo "… $e_ad -- $e_ayrinti" ;;
+        *) e_kaldi=$((e_kaldi+1)); echo "✗ $e_ad -- $e_ayrinti" ;;
+      esac
+    done < "$e_sonuc"
+  fi
+fi
+
 echo
 echo "derleme -- geçti: $d_gecti   kaldı: $d_kaldi   sunucu: $d_sunucu   toplam: ${#hedefler[@]}"
 [ -n "$TARAYICI" ] && echo "çalışma -- geçti: $c_gecti   kaldı: $c_kaldi   eksik: $c_eksik"
+[ -n "$EDITOR_SINAMA" ] && echo "editör -- geçti: $e_gecti   kaldı: $e_kaldi   eksik: $e_eksik"
 
 if [ -n "$GUNCELLE" ]; then
   mkdir -p "$DIR/sonuclar"
@@ -205,7 +230,13 @@ if [ -n "$GUNCELLE" ]; then
       printf 'betik\tdurum\tsüre\tpixi\tçizim\tkare\tçocuk\tdokuÖnbelleği\thatalar\tuyarılar\tçıktı\n'; cat "$c_sonuc"; } > "$DIR/sonuclar/calisma.tsv"
     echo "yazıldı: sonuclar/calisma.tsv (+ sonuclar/gorseller/*.png -- git'e girmez)"
   fi
+  if [ -n "$EDITOR_SINAMA" ]; then
+    { echo "# once_dene/dene.sh editör yolu sonucu -- $(date -u +%Y-%m-%d) -- $KOCO${KOCO_NOT:+ -- $KOCO_NOT}"
+      echo "# geçti: $e_gecti   kaldı: $e_kaldi   eksik: $e_eksik"
+      printf 'sınama\tdurum\tayrıntı\n'; cat "$e_sonuc"; } > "$DIR/sonuclar/editor.tsv"
+    echo "yazıldı: sonuclar/editor.tsv"
+  fi
 fi
 
 if [ "$d_sunucu" -gt 0 ]; then exit 2; fi
-[ "$d_kaldi" -eq 0 ] && [ "$c_kaldi" -eq 0 ] && [ "$c_eksik" -eq 0 ]
+[ "$d_kaldi" -eq 0 ] && [ "$c_kaldi" -eq 0 ] && [ "$c_eksik" -eq 0 ] && [ "$e_kaldi" -eq 0 ] && [ "$e_eksik" -eq 0 ]
