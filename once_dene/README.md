@@ -14,6 +14,7 @@ once_dene/
   tarayici/sahne.html     editörün resultframe.scala.html'inin başsız eşi (aynı öğe kimlikleri)
   tarayici/cizdir.js      Playwright koşucusu: hata, çıktı, PIXI sürümü, çizim/kare sayıları
   tarayici/ornekle.js     tek betiği koşarken PIXI'nin iç durumunu ZAMAN İÇİNDE örnekler (aşağıya bak)
+  cevir-seli.sh           /cevir seli altında derlemenin yavaşlamasını ölçer (koco-deploy#70; yalnız yerel adres)
   tarayici/editor.js      GERÇEK editör sayfasını, /resultframe'i ve /api kapısını sınar (`-e`; aşağıya bak)
   tarayici/package.json   playwright bağımlılığı (npm install; npx playwright install chromium)
   sonuclar/derleme.tsv    son derleme sonucu (betik, durum, özet)
@@ -219,6 +220,24 @@ imajla (editor `265f54c`) 7 sınama kırmızı: sandbox başlığı, opak köken
   `-autoplay-izni` kırmızı oldu.
 - `-tek-belge-isteği` ve `-tek-ek-istek` sayaçlarının kırmızısı **gösterilemedi**: #52'nin iki istek
   davranışını üreten bir imaj elinde yoktu; sayaç yalnız geçen tarafta (değer 1) doğrulandı.
+
+## `/cevir` seli altında derleme (`cevir-seli.sh`)
+
+Kapı hiç yük bindirmez; bu betik tek bir soruya bakar: 60 KB'lık `/cevir` istekleri ~8/sn akarken
+**derleme** ne kadar yavaşlıyor (koco-deploy#70). Üç evre: yüksüz, sel altında, sel sonrası yüksüz.
+
+```sh
+KOCO=http://127.0.0.1:7880 ./cevir-seli.sh        # N=8 derleme/evre, 8 istek/sn
+```
+
+- **Yalnız yerel adreslere koşar** (`localhost`, `127.0.0.1`); sınırdaki 64 KB'lık istekler üretimin 2
+  çekirdeğini doldurabilir. Canlıya bilerek koşmak için `KOCO_SEL_IZNI=1`.
+- Karşılaştırılacak şey **oran**: mutlak süreler koşudan koşuya değişir (ısınma; v84'te yüksüz 0.46-0.8 sn
+  görüldü), oran 3-4× kaldı. Düzeltme sonrası oran 1'e yaklaşmalı.
+- Sel kesilince router'ın kuyruğu boşalana kadar beklenir ve süresi yazılır: seli kesip hemen ölçmek
+  "sel sonrası"nı şişirir (ilk sürümde 0.8 yerine 2.3 sn çıktı).
+- Her derleme isteğine benzersiz bir yorum girer: router sonucu kaynak özetiyle önbelleklediği için
+  girmezse önbellekten dönen 0.3 sn'lik yanıtları ölçersiniz. `sar()` `dene.sh`'ten çekilir (üçüncü kopya yok).
 
 ## Betikler ve kapsadıkları
 
