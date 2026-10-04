@@ -111,7 +111,7 @@ kitaplik_hazirla() {
 if [ -n "$TARAYICI" ]; then
   command -v node >/dev/null || { echo "node yok; -t için Node.js ve Playwright gerekir (tarayici/package.json)" >&2; exit 2; }
   if [ -d "$DIR/tarayici/node_modules/playwright" ]; then export NODE_PATH="$DIR/tarayici/node_modules${NODE_PATH:+:$NODE_PATH}"; fi
-  node -e "require('playwright')" 2>/dev/null || { echo "playwright bulunamadı: cd tarayici && npm install && npx playwright install chromium" >&2; exit 2; }
+  node -e "require('playwright')" 2>/dev/null || { echo "playwright yüklenemedi (node $(node -v)). Playwright Node 20+ ister; kurulu değilse: cd tarayici && npm install && npx playwright install chromium (bkz. README, Kullanım: \"Node 20 ya da üstü şart\")" >&2; exit 2; }
   kitaplik_hazirla
 fi
 

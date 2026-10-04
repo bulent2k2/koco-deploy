@@ -31,6 +31,21 @@ KOCO=http://localhost:7860 ./dene.sh -t      # yerel konteyner: derleme + taray�
 ```
 
 Tarayıcı koşusu için bir kez: `cd tarayici && npm install && npx playwright install chromium`.
+
+**Node 20 ya da üstü şart.** Playwright daha eski bir Node'da yüklenmez (`You are running Node.js
+16.16.0. Playwright requires Node.js 20 or higher.`). Önce `node -v` bakın. Varsayılan `node`
+eskiyse (bu makinede `/usr/local/bin/node` v16.16.0'dı) Homebrew'daki yenisini o komut için öne alın:
+
+```sh
+PATH=/usr/local/opt/node@26/bin:$PATH KOCO=http://localhost:7860 ./dene.sh -t -g
+# ya da bu kabuk oturumu boyunca:  export PATH=/usr/local/opt/node@26/bin:$PATH
+```
+
+Kurulum da aynı Node ile yapılmalı: `npx playwright install chromium` eski Node'da yukarıdaki iletiyle
+durur. Chromium macOS'ta `~/Library/Caches/ms-playwright` altına iner. (Eski `dene.sh` bu durumu
+"playwright bulunamadı" diye gösteriyordu: paket kurulu olsa bile `require` Node sürümünden patlıyor,
+ve ileti yanlış yöne çekiyordu. Şimdi Node sürümünü de yazıyor.)
+
 Kitaplıklar (`pixi.min.js`, `jsts.min.js`, `howler.min.js`) ve kaplumbağa simgesi ilk koşuda
 `$KOCO/assets/...` adresinden `tarayici/kitaplik/` ve `tarayici/assets/` altına indirilir
 (git'e girmez); böylece tarayıcı **canlının sunduğu** PIXI sürümüyle koşar. Yerel bir
