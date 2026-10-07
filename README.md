@@ -108,7 +108,7 @@ Aksi halde durur. Bilerek eski ya da yerel bir sürüm dağıtmak için
 | `KOCO_GOZCU_NICE` | derleyicilerin nice değeri (varsayılan 10; bkz. `start.sh`) |
 | `KOCO_DERLEYICI_KOMUTU` | gözcünün başlattığı komut; **yalnız sınama için** (varsayılan `/app/compiler/bin/scalafiddle-core`) |
 | `PUBLIC_URL` | genel adresi elle belirle; yoksa `SPACE_HOST` / `FLY_APP_NAME` / yerelden türetilir |
-| `KOCO_ORNEKLER` | editörün `/ornek/<yol>` ile sunduğu örnek dizini (imajda `/app/ornekler`) |
+| `KOCO_ORNEKLER` | editörün `/ornek/<yol>` ile sunduğu örnek dizini (imajda `/app/ornekler`). Router da AYNI değişkeni okur: düzenleyicideki `// #yükle` satırlarını derlemeden önce bu dizinden genişletir (kojojs-core `OrnekYukleyici`); boşsa genişletme kapalıdır. `start.sh` ikisine de verir, ayrı ayarlamaya gerek yok |
 
 ## Örnek betikler (`/ornek/<yol>`)
 
