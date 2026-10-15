@@ -31,9 +31,9 @@ Tek konteynerde üç JVM servisi ve önlerinde nginx:
 | nginx | **7860** | tek genel port |
 
 nginx yol ayrımı: `/compile`, `/complete`, `/embed`, `/codeframe`,
-`/compileResult`, `/cevir`, `/cache/*` → router; kalan her şey → editör.
+`/compileResult`, `/translate`, `/cevir`, `/cache/*` → router; kalan her şey → editör.
 
-`/cevir` gövdesi 64 KB ile sınırlı ve tüm istemciler için birlikte saniyede 10 istekle
+`/translate` (editörün Çevir düğmesi) ve `/cevir` (eski adı, Türkçe JSON alanlı) aynı çeviridir. İkisinin gövdesi 64 KB ile sınırlı ve ikisi birlikte, tüm istemciler için, saniyede 10 istekle
 (20'lik ani artışla) hız sınırlı; aşan istek 429 alır. Sınır istemci başına değil
 sabit anahtarlı: HF vekilinin arkasında istemci adresi güvenilir değil.
 
