@@ -147,6 +147,26 @@ Bu kurulumu yeniden üretecek olan için, pahalıya mal olmuş dersler:
   `SCALAFIDDLE_SQL_URL` ile gerçek Postgres gerekir.
 - **Port bekleme zaman aşımı ölümcül olmamalı.** Fly'ın paylaşımlı çekirdeğinde
   editör 100+ sn'de açılabiliyor; `exit` edersen makine sonsuz döngüye girer.
+- **`kojojs-core/page` kojojs-dev'in KOPYASI; senkron atlanırsa değişiklik canlıya
+  çıkmaz.** `build.sh` runtime'ı `kojojs-core`'dan paketler, `kojojs-dev`'den değil
+  (dev yalnız `ornekler/` ve `medya/` verir). kojojs-dev'de bir runtime PR'ı
+  birleşince `sync-kojojs-core.sh` ile core'a ayrı bir PR gerekir; bu atlanabiliyor
+  ve `build.sh` bunu fark etmiyor: iki klon da `master`, temiz ve güncel
+  görünür. Ekim 2026'da iki kez yaşandı: Eskiz (kojojs-dev #216) ve çizim birimi
+  `yansıtX`/`yansıtY` (#218), ikisi de `not found: type ...` ile ancak örnek
+  doğrulamasında ortaya çıktı. **Her yayımdan önce** (kojojs-dev'de son
+  yayımdan beri runtime kodu değiştiyse zorunlu), klonlar `master`'dayken:
+
+  ```sh
+  cd ~/src/git/ikoco
+  for p in kojo com pixiscalajs howlerscalajs libtessjs; do
+    diff -rq --exclude=target kojojs-dev/src/main/scala/$p kojojs-core/page/src/main/scala/$p
+  done && echo "page aynası güncel"
+  ```
+
+  Çıktı `Only in ...` ya da `differ` ise yayımlama: `cd kojojs-dev && KOJOJS_CORE_213=1
+  ./sync-kojojs-core.sh`, core'da dal + PR aç, CI yeşil olunca birleştir, sonra yayımla.
+  (Paket listesi `kojojs-dev/sync-kojojs-core.sh`'taki `PAKETLER` ile aynı olmalı.)
 
 Kaynak: [kojojs-dev](https://github.com/bulent2k2/kojojs-dev) ·
 [kojojs-core](https://github.com/bulent2k2/kojojs-core) ·
