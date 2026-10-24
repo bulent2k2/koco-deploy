@@ -171,7 +171,8 @@ Bu kurulumu yeniden üretecek olan için, pahalıya mal olmuş dersler:
   sınırı DEĞİL.** Editör akka-http çalıştırıyor; `play.server.netty.*` ayarları etkisiz.
   Yığın izinde `play.shaded.ahc…HttpClientCodec` varsa GitHub'dan gelen **yanıt** AHC'nin
   8192 baytlık sınırını aşmıştır (giriş `/authenticate/github` adımında düşer). Sınır
-  yalnız gölgeli sistem özelliğiyle ayarlanır: `start.sh`'taki
+  AHC'nin gölgeli sistem özelliğiyle ayarlanır (Play'in `play.ws.ahc.*` ayarları bu alanı
+  açmıyor): `start.sh`'taki
   `-Dplay.shaded.ahc.org.asynchttpclient.httpClientCodecMaxHeaderSize=65536`
   (gölgesiz `org.asynchttpclient.…` adı etkisiz). Ayrıntı:
   [docs/olaylar/2026-10-24-github-giris.md](docs/olaylar/2026-10-24-github-giris.md).
