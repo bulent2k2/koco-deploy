@@ -212,7 +212,8 @@ fi
 # istemcisinin (AHC/Netty) 8192 baytlık başlık sınırını aşabiliyor ve giriş
 # "TooLongFrameException: HTTP header is larger than 8192 bytes" ile düşüyor
 # (gelen istek değil; sunucu akka-http, Netty değil). Sınır kod/yapılandırma
-# dosyasından değil yalnız bu sistem özelliğinden ayarlanabiliyor.
+# dosyasından değil (Play'in play.ws.ahc.* ayarları bu alanı açmıyor) AHC'nin
+# kendi özelliğinden ayarlanıyor; sistem özelliği en basit yol.
 (
   export APPLICATION_SECRET="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}"
   export SILHOUETTE_KEY="$SIL_KEY"
