@@ -208,6 +208,11 @@ fi
 # üzerinden derleyicilere -- sızmasını önlüyor. (Fly secret'ları zaten
 # konteynerin ortamında; alt kabuk yalnız buradaki geri düşüş değerlerini
 # ve SIL_KEY'in geçici üretilmişini editöre sınırlıyor.)
+# GitHub girişinde editörün GitHub'a yaptığı çağrının YANITI, Play'in gömülü HTTP
+# istemcisinin (AHC/Netty) 8192 baytlık başlık sınırını aşabiliyor ve giriş
+# "TooLongFrameException: HTTP header is larger than 8192 bytes" ile düşüyor
+# (gelen istek değil; sunucu akka-http, Netty değil). Sınır kod/yapılandırma
+# dosyasından değil yalnız bu sistem özelliğinden ayarlanabiliyor.
 (
   export APPLICATION_SECRET="${APPLICATION_SECRET:-koco-yerel-gelistirme-anahtari-en-az-32-karakter}"
   export SILHOUETTE_KEY="$SIL_KEY"
@@ -216,6 +221,7 @@ fi
     -Dsilhouette.authenticator.secureCookie=$SECURE_COOKIE \
     -Dsilhouette.csrfStateItemHandler.secureCookie=$SECURE_COOKIE \
     -Dh2.db.url="$H2_URL" \
+    -Dplay.shaded.ahc.org.asynchttpclient.httpClientCodecMaxHeaderSize=65536 \
     -Dhttp.port=9000
 ) &
 
