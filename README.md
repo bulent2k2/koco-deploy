@@ -167,6 +167,15 @@ Bu kurulumu yeniden üretecek olan için, pahalıya mal olmuş dersler:
   Çıktı `Only in ...` ya da `differ` ise yayımlama: `cd kojojs-dev && KOJOJS_CORE_213=1
   ./sync-kojojs-core.sh`, core'da dal + PR aç, CI yeşil olunca birleştir, sonra yayımla.
   (Paket listesi `kojojs-dev/sync-kojojs-core.sh`'taki `PAKETLER` ile aynı olmalı.)
+- **"TooLongFrameException: HTTP header is larger than 8192 bytes" gelen isteğin
+  sınırı DEĞİL.** Editör akka-http çalıştırıyor; `play.server.netty.*` ayarları etkisiz.
+  Yığın izinde `play.shaded.ahc…HttpClientCodec` varsa GitHub'dan gelen **yanıt** AHC'nin
+  8192 baytlık sınırını aşmıştır (giriş `/authenticate/github` adımında düşer). Sınır
+  AHC'nin gölgeli sistem özelliğiyle ayarlanır (Play'in `play.ws.ahc.*` ayarları bu alanı
+  açmıyor): `start.sh`'taki
+  `-Dplay.shaded.ahc.org.asynchttpclient.httpClientCodecMaxHeaderSize=65536`
+  (gölgesiz `org.asynchttpclient.…` adı etkisiz). Ayrıntı:
+  [docs/olaylar/2026-10-24-github-giris.md](docs/olaylar/2026-10-24-github-giris.md).
 
 Kaynak: [kojojs-dev](https://github.com/bulent2k2/kojojs-dev) ·
 [kojojs-core](https://github.com/bulent2k2/kojojs-core) ·
